@@ -98,15 +98,15 @@ void teapot_render::render()
     ID3D12Resource* current_buffer{ m_swap_chain_buffers[frame_index].Get() };
 
     // #5
-    D3D12_RESOURCE_BARRIER barrierDesc;
-	ZeroMemory(&barrierDesc, sizeof(barrierDesc));
-	barrierDesc.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-	barrierDesc.Transition.pResource = current_buffer;
-	barrierDesc.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
-	barrierDesc.Transition.StateBefore = D3D12_RESOURCE_STATE_PRESENT;
-	barrierDesc.Transition.StateAfter = D3D12_RESOURCE_STATE_RENDER_TARGET;
-	barrierDesc.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
-    m_command_list->ResourceBarrier(1, &barrierDesc);
+    D3D12_RESOURCE_BARRIER barrier_desc;
+	ZeroMemory(&barrier_desc, sizeof(barrier_desc));
+	barrier_desc.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+	barrier_desc.Transition.pResource = current_buffer;
+	barrier_desc.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+	barrier_desc.Transition.StateBefore = D3D12_RESOURCE_STATE_PRESENT;
+	barrier_desc.Transition.StateAfter = D3D12_RESOURCE_STATE_RENDER_TARGET;
+	barrier_desc.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
+    m_command_list->ResourceBarrier(1, &barrier_desc);
 
     // #6 offsetting to the descriptor handle for that buffer.
     D3D12_CPU_DESCRIPTOR_HANDLE desc_handle_rtv{ m_rtv_descriptor_heap->GetCPUDescriptorHandleForHeapStart() };
@@ -127,7 +127,7 @@ void teapot_render::render()
 
     // #8
     std::vector<D3D12_VERTEX_BUFFER_VIEW> my_array{ m_control_points_buffer_view };
-    m_command_list->IASetVertexBuffers(1, static_cast<UINT>(my_array.size()), my_array.data());
+    m_command_list->IASetVertexBuffers(0, static_cast<UINT>(my_array.size()), my_array.data());
 
     // #9
     std::vector<int> root_constants{ m_tess_factor, m_tess_factor };
@@ -162,7 +162,7 @@ void teapot_render::render()
     };
 
     float roll{
-        -XMConvertToRadians(
+        XMConvertToRadians(
             (m_mouse_position.y - (static_cast<float>(m_client_height) / 2.0f)) /
             (static_cast<float>(m_client_height) / 2.0f) * 180.0f
         )
@@ -195,15 +195,15 @@ void teapot_render::render()
     m_command_list->DrawIndexedInstanced(num_indices, 1, 0, 0, 0);
 
     // #16
-	ZeroMemory(&barrierDesc, sizeof(barrierDesc));
-	barrierDesc.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-	barrierDesc.Transition.pResource = current_buffer;
-	barrierDesc.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
-	barrierDesc.Transition.StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET;
-	barrierDesc.Transition.StateAfter = D3D12_RESOURCE_STATE_PRESENT;
-	barrierDesc.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
+	::ZeroMemory(&barrier_desc, sizeof(barrier_desc));
+	barrier_desc.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+	barrier_desc.Transition.pResource = current_buffer;
+	barrier_desc.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+	barrier_desc.Transition.StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET;
+	barrier_desc.Transition.StateAfter = D3D12_RESOURCE_STATE_PRESENT;
+	barrier_desc.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
 
-    m_command_list->ResourceBarrier(1, &barrierDesc);
+    m_command_list->ResourceBarrier(1, &barrier_desc);
 
     // #17
     THROW_GRAPHICS_INFO(m_command_list->Close());
@@ -391,12 +391,13 @@ void teapot_render::create_root_signature()
 void teapot_render::create_pipeline_state_wire_frame()
 {
     m_pipeline_state_wire_frame = create_pipeline_state(D3D12_FILL_MODE_WIREFRAME, D3D12_CULL_MODE_NONE);
-    m_curr_pipeline_state = m_pipeline_state_wire_frame;
+    //m_curr_pipeline_state = m_pipeline_state_wire_frame;
 }
 
 void teapot_render::create_pipeline_state_solid()
 {
     m_pipeline_state_solid = create_pipeline_state(D3D12_FILL_MODE_SOLID, D3D12_CULL_MODE_NONE);
+    m_curr_pipeline_state = m_pipeline_state_solid;
 }
 
 void teapot_render::create_view_port()
