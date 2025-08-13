@@ -60,7 +60,9 @@ void App::render_frames() const
 	{
 		// I need to fix the issue with imgui that prevents me from dragging the imgui window outside the render
 		// window when using appPaused.
-		p_teapot_graphics->update_fps();
+		p_teapot_graphics->activate_v_sync_parameters();
+		//p_teapot_graphics->update_fps();
+		p_teapot_graphics->get_mouse_pos({ wnd.mouse.GetPosX(), wnd.mouse.GetPosY() });
 		p_teapot_graphics->render();
 	}
 	else
@@ -88,6 +90,13 @@ void App::handle_kbd_messages()
 			break;
 		default:
 			break;
+		}
+
+		// keyboard press keys
+		if(wnd.kbd.KeyIsPressed('V'))
+		{
+			p_teapot_graphics->toggle_v_sync();
+			::OutputDebugString(L"--------[V-SYNC ENABLED]-------\n");
 		}
 	}
 }

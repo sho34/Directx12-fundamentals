@@ -17,12 +17,7 @@ int WINAPI WinMain(
 	{
 		return App{}.Run();
 	}
-	//catch (const DxException& e)
-	//{
-	//	MessageBox(
-	//		nullptr, e.what().c_str(), L"DIRECTX EXCEPTION", MB_OK | MB_ICONEXCLAMATION
-	//	);
-	//}
+
 	catch (const Window::Exception& e)
 	{
 		MessageBoxA(

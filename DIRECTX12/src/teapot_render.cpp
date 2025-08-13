@@ -54,6 +54,7 @@ teapot_render::teapot_render(HWND hWnd, int width, int height)
         m_colors_buffer.Get(), TeapotData::patchesColors.size()
     );
 
+    // This is throwing a link error when i run it 
 
     //p_imgui_gfx = std::make_unique<imgui_gfx>(
     //    m_hwnd, m_dx12_device.Get(), m_srv_descriptor_heap.Get(), DXGI_FORMAT_R8G8B8A8_UNORM, m_buffer_count
@@ -66,6 +67,11 @@ teapot_render::teapot_render(HWND hWnd, int width, int height)
     create_pipeline_state_solid();
     create_view_port();
     create_scissor_rect();
+
+}
+
+teapot_render::~teapot_render()
+{
 
 }
 
@@ -109,13 +115,86 @@ void teapot_render::render()
     D3D12_CPU_DESCRIPTOR_HANDLE desc_handle_dsv{ m_dsv_descriptor_heap->GetCPUDescriptorHandleForHeapStart() };
 
     // set our current back buffer as the render target.
-    m_command_list->OMSetRenderTargets(1, &desc_handle_rtv, FALSE, nullptr);
+    m_command_list->OMSetRenderTargets(1, &desc_handle_rtv, FALSE, &desc_handle_dsv);
 
     // #7 paint it with the color below.
     static float clear_color[]{ 0.4f, 0.3f, 0.6f, 1.0f };
     m_command_list->ClearRenderTargetView(desc_handle_rtv, clear_color, 0, nullptr);
+    m_command_list->ClearDepthStencilView(
+        m_dsv_descriptor_heap->GetCPUDescriptorHandleForHeapStart(), D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr
+    );
+    m_command_list->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_16_CONTROL_POINT_PATCHLIST);
 
     // #8
+    std::vector<D3D12_VERTEX_BUFFER_VIEW> my_array{ m_control_points_buffer_view };
+    m_command_list->IASetVertexBuffers(1, static_cast<UINT>(my_array.size()), my_array.data());
+
+    // #9
+    std::vector<int> root_constants{ m_tess_factor, m_tess_factor };
+    m_command_list->SetGraphicsRoot32BitConstants(
+        1, static_cast<UINT>(root_constants.size()), root_constants.data(), 0
+    );
+
+    // #10
+    ID3D12DescriptorHeap* pp_heaps[] = { m_transforms_and_colors_desc_heap.Get() };
+    m_command_list->SetDescriptorHeaps(1, pp_heaps);
+    D3D12_GPU_DESCRIPTOR_HANDLE d{ m_transforms_and_colors_desc_heap->GetGPUDescriptorHandleForHeapStart() };
+    d.ptr += 0;
+    m_command_list->SetGraphicsRootDescriptorTable(2, d);
+
+    // #11
+    float aspect_ratio{ static_cast<float>(m_client_width) / static_cast<float>(m_client_height) };
+    XMMATRIX proj_matrix_dx{ XMMatrixPerspectiveFovLH(XMConvertToRadians(45), aspect_ratio, 1.0f, 100.0f) };
+
+	XMVECTOR cam_pos_dx(XMVectorSet(0.0f, 0.0f, -10.0f, 0.0f));
+	XMVECTOR cam_look_at_dx(XMVectorSet(0.0f, 0.0f, 0.0f, 0.0f));
+	XMVECTOR cam_up_dx(XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f));
+	XMMATRIX view_matrix_dx{ XMMatrixLookAtLH(cam_pos_dx, cam_look_at_dx, cam_up_dx) };
+
+    XMMATRIX view_proj_matrix_dx{ view_matrix_dx * proj_matrix_dx };
+
+    UINT const_data_size_aligned{ (sizeof(XMFLOAT4X4) + 255) & ~255 };
+    float pitch{
+        -XMConvertToRadians(
+            (m_mouse_position.x - (static_cast<float>(m_client_width) / 2.0f)) / 
+            (static_cast<float>(m_client_width) / 2.0f) * 180.0f
+        )
+    };
+
+    float roll{
+        -XMConvertToRadians(
+            (m_mouse_position.y - (static_cast<float>(m_client_height) / 2.0f)) /
+            (static_cast<float>(m_client_height) / 2.0f) * 180.0f
+        )
+    };
+
+	XMMATRIX model_matrix_rotation_dx{ XMMatrixRotationRollPitchYaw(roll, pitch, 0.0f) };
+	XMMATRIX model_matrix_translation_dx{ XMMatrixTranslation(0.0f, -1.0f, 0.0f) };
+	XMMATRIX model_matrix_dx{ model_matrix_rotation_dx * model_matrix_translation_dx };
+
+    XMFLOAT4X4 mvp_matrix;
+    XMStoreFloat4x4(&mvp_matrix, model_matrix_dx * view_proj_matrix_dx);
+
+    // #12
+    D3D12_RANGE read_range = { 0, 0 };
+    uint8_t* cbv_data_begin;
+    m_constant_buffer->Map(0, &read_range, reinterpret_cast<void**>(&cbv_data_begin));
+    ::memcpy(&cbv_data_begin[frame_index * const_data_size_aligned], &mvp_matrix, sizeof(mvp_matrix));
+    m_constant_buffer->Unmap(0, nullptr);
+
+    // #13
+    m_command_list->SetGraphicsRootConstantBufferView(
+        0, m_constant_buffer->GetGPUVirtualAddress() + frame_index * const_data_size_aligned
+    );
+
+    // #14
+    m_command_list->IASetIndexBuffer(&m_control_points_index_buffer_view);
+
+    // #15
+    uint32_t num_indices{ m_control_points_index_buffer_view.SizeInBytes / sizeof(uint32_t) };
+    m_command_list->DrawIndexedInstanced(num_indices, 1, 0, 0, 0);
+
+    // #16
 	ZeroMemory(&barrierDesc, sizeof(barrierDesc));
 	barrierDesc.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
 	barrierDesc.Transition.pResource = current_buffer;
@@ -126,22 +205,37 @@ void teapot_render::render()
 
     m_command_list->ResourceBarrier(1, &barrierDesc);
 
-    // #9
+    // #17
     THROW_GRAPHICS_INFO(m_command_list->Close());
 
+    // #18
     ID3D12CommandList* cmd_lists{ m_command_list.Get() };
     m_command_queue->ExecuteCommandLists(1, &cmd_lists);
 
-    THROW_GRAPHICS_INFO(m_swapchain_4->Present(1, 0));
+    // #19
+    THROW_GRAPHICS_INFO(m_swapchain_4->Present(m_sync_interval, m_present_flags));
 
-    // #10
+    // #20
     UINT64& fence_value{ m_frame_fence_values[frame_index] };
     ++fence_value;
     ComPtr<ID3D12Fence> fence{ m_fences[frame_index] };
     THROW_GRAPHICS_INFO(m_command_queue->Signal(fence.Get(), fence_value));
 
-    // #11 wait for the current frame to finish rendering to the buffer.
+    // #21 wait for the current frame to finish rendering to the buffer.
     wait_for_frame(m_swapchain_4->GetCurrentBackBufferIndex());
+}
+
+void teapot_render::get_mouse_pos(POINT mouse_pos)
+{
+#if defined(_DEBUG)
+    {
+		std::ostringstream oss;
+		oss << "mouse pos (" << mouse_pos.x << ", " << mouse_pos.y << ")\n";
+		::OutputDebugString(oss.str().c_str());
+    }
+#endif
+
+    m_mouse_position = mouse_pos;
 }
 
 void teapot_render::create_transforms_and_colors_desc_heap()

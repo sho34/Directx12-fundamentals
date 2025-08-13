@@ -57,6 +57,7 @@ private:
 	void create_fences();
 	void create_fence_event_handle();
 	void create_command_queue();
+	void check_tearing_support();
 	void create_swap_chain();
 	void get_swap_chain_buffers();
 	void create_descriptor_heap_rtv();
@@ -68,6 +69,9 @@ protected:
 	void wait_for_frame(UINT frameIndex);
 	void update_render_target_views();
 
+public:
+	void toggle_v_sync();
+	void activate_v_sync_parameters();
 public:
 	std::wstring get_adapter_details() { return adapater_details; };
 
@@ -96,7 +100,8 @@ protected:
 protected:
 	UINT		m_rtv_descriptor_size;
 	UINT		m_current_back_buffer_index;
-
+	UINT		m_present_flags;
+	UINT		m_sync_interval;
 protected:
 	// synchronization objects.
 	ComPtr<ID3D12Fence> m_fence;

@@ -15,9 +15,11 @@ class teapot_render : public directx12_graphics
 {
 public:
 	teapot_render(HWND hWnd, int width, int height);
+	~teapot_render();
 
 public:
 	void render();
+	void get_mouse_pos(POINT);
 
 private:
 	void create_transforms_and_colors_desc_heap();
@@ -32,7 +34,7 @@ private:
 private:
 	ComPtr<ID3D12PipelineState> create_pipeline_state(D3D12_FILL_MODE fillMode, D3D12_CULL_MODE cullMode);
 	// for imgui graphics
-	std::unique_ptr<imgui_gfx> p_imgui_gfx;
+	//std::unique_ptr<imgui_gfx> p_imgui_gfx;
 
 private:
 
@@ -71,6 +73,7 @@ private:
 private:
 	int					m_tess_factor{ 8 };
 	const int			m_num_parts{ 28 };
+	POINT				m_mouse_position;
 	std::wstring		m_shader_dir{ get_file_pathw(L"output\\Debug\\x64")};
 };
 

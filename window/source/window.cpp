@@ -170,6 +170,8 @@ void Window::setFullScreen(bool fullscreen)
 
 		}
 
+		// need to disable the ALT ENTER FULLSCREEN METHOD.
+
 	}
 }
 
@@ -231,10 +233,6 @@ LRESULT Window::HandleMsg(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) noe
 		bool alt = (::GetAsyncKeyState(VK_MENU) & 0x8000) != 0;
 		switch (wParam)
 		{
-		case 'V':
-			// will enable v-sync here later.
-			OutputDebugStringA("V-SYNC ENABLED\n");
-			break;
 		case VK_ESCAPE:
 			PostQuitMessage(0);
 			break;

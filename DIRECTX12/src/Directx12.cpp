@@ -120,6 +120,7 @@ void directx12_graphics::initiallize_pipeline_resources()
 		create_fences();
 		create_fence_event_handle();
 		create_command_queue();
+		check_tearing_support();
 		create_swap_chain();
 		get_swap_chain_buffers();
 		create_descriptor_heap_rtv();
@@ -265,6 +266,27 @@ void directx12_graphics::create_command_queue()
 	);
 }
 
+void directx12_graphics::check_tearing_support()
+{
+	// query the factory1.5 interface
+	ComPtr<IDXGIFactory5> dxgi_factory_5;
+	if (SUCCEEDED(m_dxgi_factory_4.As(&dxgi_factory_5)))
+	{
+		if (FAILED(dxgi_factory_5->CheckFeatureSupport(
+			DXGI_FEATURE_PRESENT_ALLOW_TEARING, &m_is_tearing_supported, sizeof(m_is_tearing_supported)
+		)))
+		{
+			m_is_tearing_supported = FALSE;
+		}
+	}
+
+	if (m_is_tearing_supported)
+	{
+		::OutputDebugString("----[TEARING IS SUPPORTED ON THIS DEVICE]---\n");
+	}
+
+}
+
 void directx12_graphics::create_swap_chain()
 {
 	POINT window_size{ m_client_width, m_client_height };
@@ -280,7 +302,8 @@ void directx12_graphics::create_swap_chain()
 	swap_chain_desc.BufferCount = m_buffer_count;
 	swap_chain_desc.Scaling = DXGI_SCALING_NONE;
 	swap_chain_desc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
-	swap_chain_desc.Flags = 0;
+	// enable tearing if it is supported on this device.
+	swap_chain_desc.Flags = m_is_tearing_supported ? DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING : FALSE;
 	
 	ComPtr<IDXGISwapChain1>	swap_chai_1;
 	THROW_GRAPHICS_INFO(
@@ -289,6 +312,8 @@ void directx12_graphics::create_swap_chain()
 		)
 	);
 
+	// disable the default ALT+ENTER toggle screen feature.
+	THROW_GRAPHICS_INFO(m_dxgi_factory_4->MakeWindowAssociation(m_hwnd, DXGI_MWA_NO_ALT_ENTER));
 	THROW_GRAPHICS_INFO(swap_chai_1.As(&m_swapchain_4));
 }
 
@@ -440,6 +465,19 @@ void directx12_graphics::update_render_target_views()
 
 		rtv_handle.Offset(m_rtv_descriptor_size);
 	}
+}
+
+void directx12_graphics::toggle_v_sync()
+{
+	// THE FRAME RATE WILL INCREASE, DUE TO THE APPLICATION NOT WAITING FOR THE VERTICAL REFRESH TO PRESENT 
+	// THE RENDERED IMAGE.
+	m_is_vsync_enabled = !m_is_vsync_enabled;
+}
+
+void directx12_graphics::activate_v_sync_parameters()
+{
+	m_sync_interval = m_is_vsync_enabled ? 1 : 0;
+	m_present_flags = m_is_tearing_supported && !m_is_vsync_enabled ? DXGI_PRESENT_ALLOW_TEARING : FALSE;
 }
 
 

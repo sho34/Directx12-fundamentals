@@ -37,4 +37,5 @@ public:
 	void render_imgui(void*);
 	void test_window();
 };
+
 #endif
