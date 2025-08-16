@@ -54,6 +54,7 @@ int App::Run()
 	}
 }
 
+
 void App::render_frames() const
 {
 	if (!wnd.appPaused)
@@ -61,9 +62,9 @@ void App::render_frames() const
 		// I need to fix the issue with imgui that prevents me from dragging the imgui window outside the render
 		// window when using appPaused.
 		p_teapot_graphics->activate_v_sync_parameters();
-		//p_teapot_graphics->update_fps();
-		p_teapot_graphics->get_mouse_pos({ wnd.mouse.GetPosX(), wnd.mouse.GetPosY() });
+		p_teapot_graphics->update_fps();
 		p_teapot_graphics->render();
+		p_teapot_graphics->get_mouse_pos({ wnd.mouse.GetPosX(), wnd.mouse.GetPosY() });
 	}
 	else
 	{
@@ -109,6 +110,8 @@ void App::handle_windows_messages()
 	{
 		windows_messages m = wnd.message_queue.front();
 		wnd.message_queue.pop();
+
+		p_teapot_graphics->handle_imgui_messages(wnd.GetHwnd(), m.msg, m.w_param, m.l_param);
 
 		switch (m.msg)
 		{

@@ -54,11 +54,9 @@ teapot_render::teapot_render(HWND hWnd, int width, int height)
         m_colors_buffer.Get(), TeapotData::patchesColors.size()
     );
 
-    // This is throwing a link error when i run it 
-
-    //p_imgui_gfx = std::make_unique<imgui_gfx>(
-    //    m_hwnd, m_dx12_device.Get(), m_srv_descriptor_heap.Get(), DXGI_FORMAT_R8G8B8A8_UNORM, m_buffer_count
-    //);
+    p_imgui_gfx = std::make_unique<imgui_gfx>(
+        m_hwnd, m_dx12_device.Get(), m_srv_descriptor_heap.Get(), DXGI_FORMAT_R8G8B8A8_UNORM, m_buffer_count
+    );
 
     create_constant_buffer();
     load_shaders_to_memory();
@@ -135,7 +133,7 @@ void teapot_render::render()
         1, static_cast<UINT>(root_constants.size()), root_constants.data(), 0
     );
 
-    // #10
+    // #10 pass the address of the first descriptor 
     ID3D12DescriptorHeap* pp_heaps[] = { m_transforms_and_colors_desc_heap.Get() };
     m_command_list->SetDescriptorHeaps(1, pp_heaps);
     D3D12_GPU_DESCRIPTOR_HANDLE d{ m_transforms_and_colors_desc_heap->GetGPUDescriptorHandleForHeapStart() };
@@ -223,6 +221,7 @@ void teapot_render::render()
 
     // #21 wait for the current frame to finish rendering to the buffer.
     wait_for_frame(m_swapchain_4->GetCurrentBackBufferIndex());
+
 }
 
 void teapot_render::get_mouse_pos(POINT mouse_pos)
@@ -231,12 +230,19 @@ void teapot_render::get_mouse_pos(POINT mouse_pos)
     {
 		std::ostringstream oss;
 		oss << "mouse pos (" << mouse_pos.x << ", " << mouse_pos.y << ")\n";
-		::OutputDebugString(oss.str().c_str());
+		//::OutputDebugString(oss.str().c_str());
     }
 #endif
 
     m_mouse_position = mouse_pos;
 }
+
+
+void teapot_render::handle_imgui_messages(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
+{
+    ImGui_ImplWin32_WndProcHandler(hWnd, msg, wParam, lParam);
+}
+
 
 void teapot_render::create_transforms_and_colors_desc_heap()
 {

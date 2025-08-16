@@ -20,6 +20,7 @@ public:
 public:
 	void render();
 	void get_mouse_pos(POINT);
+	void handle_imgui_messages(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
 private:
 	void create_transforms_and_colors_desc_heap();
@@ -34,7 +35,7 @@ private:
 private:
 	ComPtr<ID3D12PipelineState> create_pipeline_state(D3D12_FILL_MODE fillMode, D3D12_CULL_MODE cullMode);
 	// for imgui graphics
-	//std::unique_ptr<imgui_gfx> p_imgui_gfx;
+	std::unique_ptr<imgui_gfx> p_imgui_gfx;
 
 private:
 

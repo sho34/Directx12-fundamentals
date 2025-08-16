@@ -95,7 +95,7 @@
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
-      <AdditionalIncludeDirectories>$(SolutionDir)externals\imgui-docking\</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)externals\imgui\;$(SolutionDir)externals\imgui\backends\</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -117,7 +117,7 @@
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
-      <AdditionalIncludeDirectories>$(SolutionDir)externals\imgui-docking\</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)externals\imgui\;$(SolutionDir)externals\imgui\backends\</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -139,7 +139,7 @@
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
-      <AdditionalIncludeDirectories>$(SolutionDir)externals\imgui-docking\</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)externals\imgui\;$(SolutionDir)externals\imgui\backends\</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -161,7 +161,7 @@
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
-      <AdditionalIncludeDirectories>$(SolutionDir)externals\imgui-docking\</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)externals\imgui\;$(SolutionDir)externals\imgui\backends\</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -184,6 +184,14 @@
     <ClInclude Include="src\dx_utils\string_works.h" />
     <ClInclude Include="src\dx_utils\utils.h" />
     <ClInclude Include="src\file_works\file_paths.h" />
+    <ClInclude Include="src\imgui_graphics\imgui\imconfig.h" />
+    <ClInclude Include="src\imgui_graphics\imgui\imgui.h" />
+    <ClInclude Include="src\imgui_graphics\imgui\imgui_impl_dx12.h" />
+    <ClInclude Include="src\imgui_graphics\imgui\imgui_impl_win32.h" />
+    <ClInclude Include="src\imgui_graphics\imgui\imgui_internal.h" />
+    <ClInclude Include="src\imgui_graphics\imgui\imstb_rectpack.h" />
+    <ClInclude Include="src\imgui_graphics\imgui\imstb_textedit.h" />
+    <ClInclude Include="src\imgui_graphics\imgui\imstb_truetype.h" />
     <ClInclude Include="src\imgui_graphics\imgui_gfx_window.h" />
     <ClInclude Include="src\teapot_data\TeapotData.h" />
     <ClInclude Include="src\teapot_render.h" />
@@ -193,6 +201,13 @@
     <ClCompile Include="src\dx_exceptions\DirectX12Ex.cpp" />
     <ClCompile Include="src\dx_exceptions\dxerr.cpp" />
     <ClCompile Include="src\dx_exceptions\infoman.cpp" />
+    <ClCompile Include="src\imgui_graphics\imgui\imgui.cpp" />
+    <ClCompile Include="src\imgui_graphics\imgui\imgui_demo.cpp" />
+    <ClCompile Include="src\imgui_graphics\imgui\imgui_draw.cpp" />
+    <ClCompile Include="src\imgui_graphics\imgui\imgui_impl_dx12.cpp" />
+    <ClCompile Include="src\imgui_graphics\imgui\imgui_impl_win32.cpp" />
+    <ClCompile Include="src\imgui_graphics\imgui\imgui_tables.cpp" />
+    <ClCompile Include="src\imgui_graphics\imgui\imgui_widgets.cpp" />
     <ClCompile Include="src\imgui_graphics\imgui_gfx_window.cpp" />
     <ClCompile Include="src\teapot_data\TeapotData.cpp" />
     <ClCompile Include="src\teapot_render.cpp" />
