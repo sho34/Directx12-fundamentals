@@ -1,23 +1,27 @@
 #include "imgui_gfx_window.h"
 
 imgui_gfx::imgui_gfx(
-	HWND hWnd, ID3D12Device2* pDevice, ID3D12DescriptorHeap* srv, DXGI_FORMAT bBufferFormat, int frames
+	HWND hWnd, ID3D12Device2* pDevice, ID3D12DescriptorHeap* srv, 
+	DXGI_FORMAT bBufferFormat, int frames, UINT imgui_offset
 )
+	: m_srv_descriptor_heap(srv),
+	  m_imgui_offset(imgui_offset),
+	  m_srv_descriptor_size(pDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV))
 {
 	IMGUI_CHECKVERSION();
 	ImGui::CreateContext();
 	ImGuiIO& io = ImGui::GetIO(); (void)io;
 
 	io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
-	//io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+	io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
 
 	ImGui::StyleColorsDark();
 	ImGui_ImplWin32_Init(hWnd);
 
 	ImGui_ImplDX12_Init(
 		pDevice, frames, bBufferFormat, srv,
-		srv->GetCPUDescriptorHandleForHeapStart(),
-		srv->GetGPUDescriptorHandleForHeapStart()
+		get_srv_cpu_handle(0),
+		get_srv_gpu_handle(0)
 	);
 
 }
@@ -38,7 +42,7 @@ void imgui_gfx::init()
 	ImGui::NewFrame();
 }
 
-void imgui_gfx::set_up_window_docking()
+void imgui_gfx::setup_window_docking()
 {
 
 }
@@ -58,4 +62,20 @@ void imgui_gfx::test_window()
 {
 	ImGui::Begin("test window");
 	ImGui::End();
+}
+
+D3D12_CPU_DESCRIPTOR_HANDLE imgui_gfx::get_srv_cpu_handle(UINT local_offset) const
+{
+	// get the handle to the start of the descriptor heap on the cpu side
+	D3D12_CPU_DESCRIPTOR_HANDLE cpu_handle{ m_srv_descriptor_heap->GetCPUDescriptorHandleForHeapStart()};
+	cpu_handle.ptr += m_srv_descriptor_size * (m_imgui_offset + local_offset);
+	return cpu_handle;
+}
+
+D3D12_GPU_DESCRIPTOR_HANDLE imgui_gfx::get_srv_gpu_handle(UINT local_offset) const
+{
+	// get the handle to the start of the descriptor heap on the gpu side
+	D3D12_GPU_DESCRIPTOR_HANDLE gpu_handle{ m_srv_descriptor_heap->GetGPUDescriptorHandleForHeapStart() };
+	gpu_handle.ptr += m_srv_descriptor_size * (m_imgui_offset + local_offset);
+	return gpu_handle;
 }

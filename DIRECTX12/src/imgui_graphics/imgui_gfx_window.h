@@ -1,17 +1,15 @@
 #pragma once
+
 #ifndef __imgui_gfx_window__
 #define __imgui_gfx_window__
 
-//#define WIN32_LEAN_AND_MEAN
-//#include <windows.h>
 #include <wrl.h>
 #include <d3d12.h>
 
-
-#include "imgui.h"
-#include "imgui_impl_win32.h"
-#include "imgui_impl_dx12.h"
-#include "imgui_internal.h"
+#include "imgui/imgui.h"
+#include "imgui/imgui_impl_win32.h"
+#include "imgui/imgui_impl_dx12.h"
+#include "imgui/imgui_internal.h"
 
 class imgui_gfx
 {
@@ -22,20 +20,27 @@ public:
 
 public:
 	imgui_gfx(
-		HWND hWnd,
-		ID3D12Device2* pDevice,
-		ID3D12DescriptorHeap* srv,
-		DXGI_FORMAT bBufferFormat,
-		int frames
+		HWND hWnd, ID3D12Device2* pDevice, ID3D12DescriptorHeap* srv,
+		DXGI_FORMAT bBufferFormat, int frames, UINT imgui_offset
 	);
 
 	~imgui_gfx();
 
 public:
 	void init();
-	void set_up_window_docking();
+	void setup_window_docking();
 	void render_imgui(void*);
 	void test_window();
+
+private:
+	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> m_srv_descriptor_heap;
+	UINT m_imgui_offset;
+	UINT m_srv_descriptor_size;
+
+private:
+	// get the handles to the descriptor heaps.
+	D3D12_CPU_DESCRIPTOR_HANDLE get_srv_cpu_handle(UINT local_offset) const;
+	D3D12_GPU_DESCRIPTOR_HANDLE get_srv_gpu_handle(UINT local_offset) const;
 };
 
 // Forward declare message handler from imgui_impl_win32.cpp

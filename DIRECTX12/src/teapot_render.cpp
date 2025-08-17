@@ -44,18 +44,19 @@ teapot_render::teapot_render(HWND hWnd, int width, int height)
     create_transforms_and_colors_desc_heap();
     
     //fill the m_transforms_and_colors_desc_heap with 2 descriptors ()
-    utility_functions::create_srv<transform_type>(
-        m_dx12_device.Get(), m_transforms_and_colors_desc_heap.Get(), 0,
+    auto transform_gpu_handle = utility_functions::create_srv<transform_type>(
+        m_dx12_device.Get(), m_shared_descriptor_heap.Get(), 0,
         m_transforms_buffer.Get(), TeapotData::patchesTransforms.size()
     );
 
-    utility_functions::create_srv<color_type>(
-        m_dx12_device.Get(), m_transforms_and_colors_desc_heap.Get(), 1,
+    auto colors_gpu_handle = utility_functions::create_srv<color_type>(
+        m_dx12_device.Get(), m_shared_descriptor_heap.Get(), 1,
         m_colors_buffer.Get(), TeapotData::patchesColors.size()
     );
 
+    // imgui will use descriptors starting at offset 2.
     p_imgui_gfx = std::make_unique<imgui_gfx>(
-        m_hwnd, m_dx12_device.Get(), m_srv_descriptor_heap.Get(), DXGI_FORMAT_R8G8B8A8_UNORM, m_buffer_count
+		m_hwnd, m_dx12_device.Get(), m_shared_descriptor_heap.Get(), DXGI_FORMAT_R8G8B8A8_UNORM, m_buffer_count, 2
     );
 
     create_constant_buffer();
@@ -121,6 +122,7 @@ void teapot_render::render()
     m_command_list->ClearDepthStencilView(
         m_dsv_descriptor_heap->GetCPUDescriptorHandleForHeapStart(), D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr
     );
+
     m_command_list->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_16_CONTROL_POINT_PATCHLIST);
 
     // #8
@@ -133,15 +135,17 @@ void teapot_render::render()
         1, static_cast<UINT>(root_constants.size()), root_constants.data(), 0
     );
 
+
     // #10 pass the address of the first descriptor 
-    ID3D12DescriptorHeap* pp_heaps[] = { m_transforms_and_colors_desc_heap.Get() };
-    m_command_list->SetDescriptorHeaps(1, pp_heaps);
-    D3D12_GPU_DESCRIPTOR_HANDLE d{ m_transforms_and_colors_desc_heap->GetGPUDescriptorHandleForHeapStart() };
+    ID3D12DescriptorHeap* pp_heaps[] = { m_shared_descriptor_heap.Get() };
+    m_command_list->SetDescriptorHeaps(_countof(pp_heaps), pp_heaps);
+
+    D3D12_GPU_DESCRIPTOR_HANDLE d{ m_shared_descriptor_heap->GetGPUDescriptorHandleForHeapStart() };
     d.ptr += 0;
     m_command_list->SetGraphicsRootDescriptorTable(2, d);
 
     // #11
-    float aspect_ratio{ static_cast<float>(m_client_width) / static_cast<float>(m_client_height) };
+    float aspect_ratio{ static_cast<float>(m_client_height) / static_cast<float>(m_client_height) };
     XMMATRIX proj_matrix_dx{ XMMatrixPerspectiveFovLH(XMConvertToRadians(45), aspect_ratio, 1.0f, 100.0f) };
 
 	XMVECTOR cam_pos_dx(XMVectorSet(0.0f, 0.0f, -10.0f, 0.0f));
@@ -188,9 +192,16 @@ void teapot_render::render()
     // #14
     m_command_list->IASetIndexBuffer(&m_control_points_index_buffer_view);
 
+
     // #15
     uint32_t num_indices{ m_control_points_index_buffer_view.SizeInBytes / sizeof(uint32_t) };
     m_command_list->DrawIndexedInstanced(num_indices, 1, 0, 0, 0);
+
+
+	// initialize imgui
+	p_imgui_gfx->init();
+	p_imgui_gfx->test_window();
+    p_imgui_gfx->render_imgui(m_command_list.Get());
 
     // #16
 	::ZeroMemory(&barrier_desc, sizeof(barrier_desc));
@@ -242,7 +253,6 @@ void teapot_render::handle_imgui_messages(HWND hWnd, UINT msg, WPARAM wParam, LP
 {
     ImGui_ImplWin32_WndProcHandler(hWnd, msg, wParam, lParam);
 }
-
 
 void teapot_render::create_transforms_and_colors_desc_heap()
 {

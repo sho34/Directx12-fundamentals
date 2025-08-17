@@ -1,6 +1,7 @@
 #include "window.h"
 #include "../resource.h"
 #include "except_macros.h"
+#include "imgui_graphics/imgui_gfx_window.h"
 
 
 
@@ -209,10 +210,13 @@ LRESULT Window::HandleMsgThunk(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam
 
 LRESULT Window::HandleMsg(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) noexcept
 {
+	// store the windows messages in an external queue to use them later.
 	{
 		std::lock_guard<std::mutex> lock(queue_mutex);
 		message_queue.push({ msg, wParam, lParam });
 	}
+
+	ImGui_ImplWin32_WndProcHandler(hWnd, msg, wParam, lParam);
 
 	switch (msg)
 	{
@@ -233,9 +237,6 @@ LRESULT Window::HandleMsg(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) noe
 		bool alt = (::GetAsyncKeyState(VK_MENU) & 0x8000) != 0;
 		switch (wParam)
 		{
-		case VK_ESCAPE:
-			PostQuitMessage(0);
-			break;
 		case VK_RETURN:
 		{
 			if(alt)

@@ -55,7 +55,9 @@ void directx12_graphics::resize_buffers(uint32_t width, uint32_t height)
 				swap_chain_desc.BufferDesc.Format, swap_chain_desc.Flags
 			)
 		);
-		
+
+		// update the depth stencil buffer.
+		update_depth_stencil_buffer();		
 		update_render_target_views();
 	}
 }
@@ -126,7 +128,7 @@ void directx12_graphics::initiallize_pipeline_resources()
 		create_descriptor_heap_rtv();
 		create_depth_stencil_buffer();
 		create_descriptor_heap_depth_stencil();
-		create_descriptor_heap_srv();
+		create_descriptor_heap_shared();
 	}
 
 }
@@ -197,7 +199,8 @@ void directx12_graphics::log_available_graphics_adapters()
 		woss << "*[description]: " << adapterDesc.Description << "\n";
 		woss << "*[sys memory]: " << adapterDesc.DedicatedSystemMemory * to_gb << " GB" << "\n";
 		woss << "*[video memory]: " << adapterDesc.DedicatedVideoMemory * to_gb << " GB\n";
-		woss << "*[shared sys memory]: " << adapterDesc.SharedSystemMemory * to_gb << "GB\n";
+		woss << "*[shared sys memory]: " << adapterDesc.SharedSystemMemory * to_gb << " GB\n";
+		woss << "**************************************************\n\n" << std::endl;
 	}
 	// save the adapter details.
 	adapater_details = woss.str();
@@ -354,16 +357,16 @@ void directx12_graphics::create_descriptor_heap_rtv()
 	}
 }
 
-void directx12_graphics::create_descriptor_heap_srv()
+void directx12_graphics::create_descriptor_heap_shared()
 {
-	D3D12_DESCRIPTOR_HEAP_DESC descriptor_srv;
-	::ZeroMemory(&descriptor_srv, sizeof(descriptor_srv));
-	descriptor_srv.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
-	descriptor_srv.NumDescriptors = 1;
-	descriptor_srv.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
+	D3D12_DESCRIPTOR_HEAP_DESC descriptor_shared;
+	::ZeroMemory(&descriptor_shared, sizeof(descriptor_shared));
+	descriptor_shared.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
+	descriptor_shared.NumDescriptors = 4;
+	descriptor_shared.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
 
 	THROW_GRAPHICS_INFO(
-		m_dx12_device->CreateDescriptorHeap(&descriptor_srv, IID_PPV_ARGS(&m_srv_descriptor_heap))
+		m_dx12_device->CreateDescriptorHeap(&descriptor_shared, IID_PPV_ARGS(&m_shared_descriptor_heap))
 	);
 }
 
@@ -472,12 +475,36 @@ void directx12_graphics::toggle_v_sync()
 	// THE FRAME RATE WILL INCREASE, DUE TO THE APPLICATION NOT WAITING FOR THE VERTICAL REFRESH TO PRESENT 
 	// THE RENDERED IMAGE.
 	m_is_vsync_enabled = !m_is_vsync_enabled;
+	if (m_is_vsync_enabled)
+	{
+		::OutputDebugString("V-Sync Enabled.\n");
+	}
+	else
+	{
+		::OutputDebugString("V-Sync Disabled.\n");
+	};
 }
 
 void directx12_graphics::activate_v_sync_parameters()
 {
 	m_sync_interval = m_is_vsync_enabled ? 1 : 0;
 	m_present_flags = m_is_tearing_supported && !m_is_vsync_enabled ? DXGI_PRESENT_ALLOW_TEARING : FALSE;
+}
+
+void directx12_graphics::update_depth_stencil_buffer()
+{
+	if (m_depth_stencil_buffer)
+	{
+		// release the old depth stencil buffer.
+		m_depth_stencil_buffer.Reset();
+	}
+	if (m_dsv_descriptor_heap)
+	{
+		// release the old descriptor heap.
+		m_dsv_descriptor_heap.Reset();
+	}
+	create_depth_stencil_buffer();
+	create_descriptor_heap_depth_stencil();
 }
 
 

@@ -185,7 +185,7 @@ namespace utility_functions
 	}
 
 	template<typename T>
-	void create_srv(
+	D3D12_GPU_DESCRIPTOR_HANDLE create_srv(
 		ID3D12Device2* device, ID3D12DescriptorHeap* descHeap, int offset,
 		ID3D12Resource* resource,
 		size_t numElements
@@ -214,6 +214,13 @@ namespace utility_functions
 
 		// #4
 		device->CreateShaderResourceView(resource, &srv_descriptor, cpu_desciptor_handle);
+
+		// return the descriptor handle for the shader resource view.
+		D3D12_GPU_DESCRIPTOR_HANDLE gpu_descriptor_handle{ descHeap->GetGPUDescriptorHandleForHeapStart() };
+		gpu_descriptor_handle.ptr += descriptor_size * offset;
+
+		// #5
+		return gpu_descriptor_handle;
 	}
 }
 

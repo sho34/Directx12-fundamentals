@@ -61,7 +61,7 @@ private:
 	void create_swap_chain();
 	void get_swap_chain_buffers();
 	void create_descriptor_heap_rtv();
-	void create_descriptor_heap_srv();
+	void create_descriptor_heap_shared();
 	void create_depth_stencil_buffer();
 	void create_descriptor_heap_depth_stencil();
 
@@ -72,6 +72,9 @@ protected:
 public:
 	void toggle_v_sync();
 	void activate_v_sync_parameters();
+	void update_depth_stencil_buffer();
+
+
 public:
 	std::wstring get_adapter_details() { return adapater_details; };
 
@@ -89,7 +92,7 @@ protected:
 	ComPtr<ID3D12GraphicsCommandList>	m_command_list;
 	ComPtr<ID3D12DescriptorHeap>		m_rtv_descriptor_heap;
 	ComPtr<ID3D12DescriptorHeap>		m_dsv_descriptor_heap;
-	ComPtr<ID3D12DescriptorHeap>		m_srv_descriptor_heap;
+	ComPtr<ID3D12DescriptorHeap>		m_shared_descriptor_heap;
 	ComPtr<IDXGIAdapter4>				m_dxgi_adapter_4;
 	ComPtr<IDXGIFactory4>				m_dxgi_factory_4;
 	ComPtr<ID3D12Resource>				m_depth_stencil_buffer;
