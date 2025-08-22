@@ -55,7 +55,8 @@ teapot_render::teapot_render(HWND hWnd, int width, int height)
 
     // imgui will use descriptors starting at offset 2.
     p_imgui_gfx = std::make_unique<imgui_gfx>(
-		m_hwnd, m_dx12_device.Get(), m_shared_descriptor_heap.Get(), DXGI_FORMAT_R8G8B8A8_UNORM, m_buffer_count, 2
+		m_hwnd, m_dx12_device.Get(), m_shared_descriptor_heap.Get(),
+        DXGI_FORMAT_R8G8B8A8_UNORM, m_buffer_count, 2
     );
 
     create_constant_buffer();
@@ -65,6 +66,10 @@ teapot_render::teapot_render(HWND hWnd, int width, int height)
     create_pipeline_state_solid();
     create_view_port();
     create_scissor_rect();
+
+	// off-screen render target.
+    create_off_screen_render_target();
+	create_off_screen_rtv_srv_heap();
 }
 
 teapot_render::~teapot_render()
@@ -74,6 +79,8 @@ teapot_render::~teapot_render()
 
 void teapot_render::render()
 {
+    // render to off-screen.
+    update(0.0f);
     // #1  get the current back buffer index 
     UINT frame_index{ m_swapchain_4->GetCurrentBackBufferIndex() };
 
@@ -86,8 +93,6 @@ void teapot_render::render()
 
     // #3
     m_command_list->SetPipelineState(m_curr_pipeline_state.Get());
-    //m_command_list->SetGraphicsRootSignature(m_root_signature.Get());
-    m_command_list->RSSetViewports(1, &m_view_port);
     m_command_list->RSSetScissorRects(1, &m_scissor_rect);
 
 
@@ -120,84 +125,29 @@ void teapot_render::render()
     );
 
 
- //   m_command_list->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_16_CONTROL_POINT_PATCHLIST);
-
- //   // #8
- //   std::vector<D3D12_VERTEX_BUFFER_VIEW> my_array{ m_control_points_buffer_view };
- //   m_command_list->IASetVertexBuffers(0, static_cast<UINT>(my_array.size()), my_array.data());
-
- //   // #9
- //   std::vector<int> root_constants{ m_tess_factor, m_tess_factor };
- //   m_command_list->SetGraphicsRoot32BitConstants(
- //       1, static_cast<UINT>(root_constants.size()), root_constants.data(), 0
- //   );
-
-
     // #10 pass the address of the first descriptor 
     ID3D12DescriptorHeap* pp_heaps[] = { m_shared_descriptor_heap.Get() };
     m_command_list->SetDescriptorHeaps(_countof(pp_heaps), pp_heaps);
-
- //   D3D12_GPU_DESCRIPTOR_HANDLE d{ m_shared_descriptor_heap->GetGPUDescriptorHandleForHeapStart() };
- //   d.ptr += 0;
- //   m_command_list->SetGraphicsRootDescriptorTable(2, d);
-
- //   // #11
- //   float aspect_ratio{ static_cast<float>(m_client_width) / static_cast<float>(m_client_height) };
- //   XMMATRIX proj_matrix_dx{ XMMatrixPerspectiveFovLH(XMConvertToRadians(45), aspect_ratio, 1.0f, 100.0f) };
-
-	//XMVECTOR cam_pos_dx(XMVectorSet(0.0f, 0.0f, -10.0f, 0.0f));
-	//XMVECTOR cam_look_at_dx(XMVectorSet(0.0f, 0.0f, 0.0f, 0.0f));
-	//XMVECTOR cam_up_dx(XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f));
-	//XMMATRIX view_matrix_dx{ XMMatrixLookAtLH(cam_pos_dx, cam_look_at_dx, cam_up_dx) };
-
- //   XMMATRIX view_proj_matrix_dx{ view_matrix_dx * proj_matrix_dx };
-
- //   UINT const_data_size_aligned{ (sizeof(XMFLOAT4X4) + 255) & ~255 };
- //   float pitch{
- //       -XMConvertToRadians(
- //           (m_mouse_position.x - (static_cast<float>(m_client_width) / 2.0f)) / 
- //           (static_cast<float>(m_client_width) / 2.0f) * 180.0f
- //       )
- //   };
-
- //   float roll{
- //       XMConvertToRadians(
- //           (m_mouse_position.y - (static_cast<float>(m_client_height) / 2.0f)) /
- //           (static_cast<float>(m_client_height) / 2.0f) * 180.0f
- //       )
- //   };
-
-	//XMMATRIX model_matrix_rotation_dx{ XMMatrixRotationRollPitchYaw(roll, pitch, 0.0f) };
-	//XMMATRIX model_matrix_translation_dx{ XMMatrixTranslation(0.0f, -1.0f, 0.0f) };
-	//XMMATRIX model_matrix_dx{ model_matrix_rotation_dx * model_matrix_translation_dx };
-
- //   XMFLOAT4X4 mvp_matrix;
- //   XMStoreFloat4x4(&mvp_matrix, model_matrix_dx * view_proj_matrix_dx);
-
- //   // #12
- //   D3D12_RANGE read_range = { 0, 0 };
- //   uint8_t* cbv_data_begin;
- //   m_constant_buffer->Map(0, &read_range, reinterpret_cast<void**>(&cbv_data_begin));
- //   ::memcpy(&cbv_data_begin[frame_index * const_data_size_aligned], &mvp_matrix, sizeof(mvp_matrix));
- //   m_constant_buffer->Unmap(0, nullptr);
-
- //   // #13
- //   m_command_list->SetGraphicsRootConstantBufferView(
- //       0, m_constant_buffer->GetGPUVirtualAddress() + frame_index * const_data_size_aligned
- //   );
-
- //   // #14
- //   m_command_list->IASetIndexBuffer(&m_control_points_index_buffer_view);
-
-
- //   // #15
- //   uint32_t num_indices{ m_control_points_index_buffer_view.SizeInBytes / sizeof(uint32_t) };
- //   m_command_list->DrawIndexedInstanced(num_indices, 1, 0, 0, 0);
 
 
 	// render imgui
 	p_imgui_gfx->init();
 	p_imgui_gfx->scene_stats();
+    
+	ImGui::Begin("Teapot View");
+	// display the off-screen render target inside an imgui window.
+    D3D12_GPU_DESCRIPTOR_HANDLE handle{ m_shared_descriptor_heap->GetGPUDescriptorHandleForHeapStart() };
+	handle.ptr += 3 * m_dx12_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+	ImTextureID tex_id = reinterpret_cast<void*>(handle.ptr);
+
+    ImVec2 contentSize = ImGui::GetContentRegionAvail(); // Size available for rendering
+
+	m_imgui_window_width = contentSize.x;
+	m_imgui_window_height = contentSize.y;
+
+	ImGui::Image(tex_id, contentSize);
+	ImGui::End();
+
     p_imgui_gfx->render_imgui(m_command_list.Get());
 
     // #16
@@ -216,8 +166,8 @@ void teapot_render::render()
     ID3D12CommandList* cmd_lists{ m_command_list.Get() };
     m_command_queue->ExecuteCommandLists(1, &cmd_lists);
 
-    // #19
-    THROW_GRAPHICS_INFO(m_swapchain_4->Present(m_sync_interval, m_present_flags));
+	// #19
+	THROW_GRAPHICS_INFO(m_swapchain_4->Present(m_sync_interval, m_present_flags));
 
     // #20
     UINT64& fence_value{ m_frame_fence_values[frame_index] };
@@ -230,6 +180,160 @@ void teapot_render::render()
 
 }
 
+
+void teapot_render::update(float delta_time)
+{
+	// #1  get the current back buffer index 
+	UINT frame_index{ m_swapchain_4->GetCurrentBackBufferIndex() };
+
+	// #2 get the command allocator associated with that frame.
+	ComPtr<ID3D12CommandAllocator> command_allocator{ m_command_allocators[frame_index] };
+
+	// reset the command allocator for current usage.
+	THROW_GRAPHICS_INFO(command_allocator->Reset());
+	THROW_GRAPHICS_INFO(m_command_list->Reset(command_allocator.Get(), nullptr));
+
+	// #3
+	m_command_list->SetPipelineState(m_curr_pipeline_state.Get());
+    m_command_list->SetGraphicsRootSignature(m_root_signature.Get());
+
+	D3D12_VIEWPORT vp = {};
+	vp.TopLeftX = ImGui::GetMainViewport()->Pos.x;
+	vp.TopLeftY = ImGui::GetMainViewport()->Pos.y;
+	vp.Width = ImGui::GetMainViewport()->Size.x;
+	vp.Height = ImGui::GetMainViewport()->Size.y;
+	vp.MinDepth = 0.0f;
+	vp.MaxDepth = 1.0f;
+
+    m_command_list->RSSetViewports(1, &vp);
+	m_command_list->RSSetScissorRects(1, &m_scissor_rect);
+
+	// #4 index into the buffer vector and fetch the buffer for current frame rendering.
+	ID3D12Resource* current_buffer{ m_swap_chain_buffers[frame_index].Get() };
+
+
+	// #5
+	CD3DX12_RESOURCE_BARRIER barrier_desc_rt{
+		CD3DX12_RESOURCE_BARRIER::Transition(
+			current_buffer, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE
+		)
+	};
+
+	m_command_list->ResourceBarrier(1, &barrier_desc_rt);
+
+	// #6 offsetting to the descriptor handle for that buffer.
+	D3D12_CPU_DESCRIPTOR_HANDLE desc_handle_rtv{ m_off_screen_rtv_heap->GetCPUDescriptorHandleForHeapStart() };
+	D3D12_CPU_DESCRIPTOR_HANDLE desc_handle_dsv{ m_dsv_descriptor_heap->GetCPUDescriptorHandleForHeapStart() };
+
+	// set our current back buffer as the render target.
+	m_command_list->OMSetRenderTargets(1, &desc_handle_rtv, FALSE, &desc_handle_dsv);
+
+	// #7 paint it with the color below.
+	static float clear_color[]{ 0.2f, 0.5f, 0.9f, 1.0f };
+	m_command_list->ClearRenderTargetView(desc_handle_rtv, clear_color, 0, nullptr);
+	m_command_list->ClearDepthStencilView(
+		m_dsv_descriptor_heap->GetCPUDescriptorHandleForHeapStart(), D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr
+	);
+
+	m_command_list->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_16_CONTROL_POINT_PATCHLIST);
+
+    // #8
+    std::vector<D3D12_VERTEX_BUFFER_VIEW> my_array{ m_control_points_buffer_view };
+    m_command_list->IASetVertexBuffers(0, static_cast<UINT>(my_array.size()), my_array.data());
+
+    // #9
+    std::vector<int> root_constants{ m_tess_factor, m_tess_factor };
+    m_command_list->SetGraphicsRoot32BitConstants(
+        1, static_cast<UINT>(root_constants.size()), root_constants.data(), 0
+    );
+
+
+	// #10 pass the address of the first descriptor 
+	ID3D12DescriptorHeap* pp_heaps[] = { m_shared_descriptor_heap.Get() };
+	m_command_list->SetDescriptorHeaps(_countof(pp_heaps), pp_heaps);
+
+	D3D12_GPU_DESCRIPTOR_HANDLE d{ m_shared_descriptor_heap->GetGPUDescriptorHandleForHeapStart() };
+	d.ptr += 0;
+	m_command_list->SetGraphicsRootDescriptorTable(2, d);
+
+	// #11
+	float aspect_ratio{ static_cast<float>(m_imgui_window_width) / static_cast<float>(m_imgui_window_height) };
+	XMMATRIX proj_matrix_dx{ XMMatrixPerspectiveFovLH(XMConvertToRadians(45), aspect_ratio, 1.0f, 100.0f) };
+
+	XMVECTOR cam_pos_dx(XMVectorSet(0.0f, 0.0f, -10.0f, 0.0f));
+	XMVECTOR cam_look_at_dx(XMVectorSet(0.0f, 0.0f, 0.0f, 0.0f));
+	XMVECTOR cam_up_dx(XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f));
+	XMMATRIX view_matrix_dx{ XMMatrixLookAtLH(cam_pos_dx, cam_look_at_dx, cam_up_dx) };
+
+    XMMATRIX view_proj_matrix_dx{ view_matrix_dx * proj_matrix_dx };
+
+    UINT const_data_size_aligned{ (sizeof(XMFLOAT4X4) + 255) & ~255 };
+    float pitch{
+        -XMConvertToRadians(
+            (m_mouse_position.x - (static_cast<float>(m_client_width) / 2.0f)) / 
+            (static_cast<float>(m_client_width) / 2.0f) * 180.0f
+        )
+    };
+
+    float roll{
+        XMConvertToRadians(
+            (m_mouse_position.y - (static_cast<float>(m_client_height) / 2.0f)) /
+            (static_cast<float>(m_client_height) / 2.0f) * 180.0f
+        )
+    };
+
+	XMMATRIX model_matrix_rotation_dx{ XMMatrixRotationRollPitchYaw(roll, pitch, 0.0f) };
+	XMMATRIX model_matrix_translation_dx{ XMMatrixTranslation(0.0f, -1.0f, 0.0f) };
+	XMMATRIX model_matrix_dx{ model_matrix_rotation_dx * model_matrix_translation_dx };
+
+    XMFLOAT4X4 mvp_matrix;
+    XMStoreFloat4x4(&mvp_matrix, model_matrix_dx * view_proj_matrix_dx);
+
+    // #12
+    D3D12_RANGE read_range = { 0, 0 };
+    uint8_t* cbv_data_begin;
+    m_constant_buffer->Map(0, &read_range, reinterpret_cast<void**>(&cbv_data_begin));
+    ::memcpy(&cbv_data_begin[frame_index * const_data_size_aligned], &mvp_matrix, sizeof(mvp_matrix));
+    m_constant_buffer->Unmap(0, nullptr);
+
+    // #13
+    m_command_list->SetGraphicsRootConstantBufferView(
+        0, m_constant_buffer->GetGPUVirtualAddress() + frame_index * const_data_size_aligned
+    );
+
+    // #14
+    m_command_list->IASetIndexBuffer(&m_control_points_index_buffer_view);
+
+    // #15
+    uint32_t num_indices{ m_control_points_index_buffer_view.SizeInBytes / sizeof(uint32_t) };
+
+    m_command_list->DrawIndexedInstanced(num_indices, 1, 0, 0, 0);
+
+	CD3DX12_RESOURCE_BARRIER barrier_desc_present{
+	CD3DX12_RESOURCE_BARRIER::Transition(
+		current_buffer, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_PRESENT
+	)
+	};
+
+	m_command_list->ResourceBarrier(1, &barrier_desc_present);
+
+	// #17
+	THROW_GRAPHICS_INFO(m_command_list->Close());
+
+	// #18
+	ID3D12CommandList* cmd_lists{ m_command_list.Get() };
+	m_command_queue->ExecuteCommandLists(1, &cmd_lists);
+
+	// #20
+	UINT64& fence_value{ m_frame_fence_values[frame_index] };
+	++fence_value;
+	ComPtr<ID3D12Fence> fence{ m_fences[frame_index] };
+	THROW_GRAPHICS_INFO(m_command_queue->Signal(fence.Get(), fence_value));
+
+	// #21 wait for the current frame to finish rendering to the buffer.
+	wait_for_frame(m_swapchain_4->GetCurrentBackBufferIndex());
+
+}
 
 void teapot_render::get_mouse_pos(POINT mouse_pos)
 {
@@ -520,4 +624,72 @@ ComPtr<ID3D12PipelineState> teapot_render::create_pipeline_state(D3D12_FILL_MODE
     );
 
     return pipeline_state;
+}
+
+void teapot_render::create_off_screen_render_target()
+{
+	D3D12_RESOURCE_DESC tex_desc = {};
+	tex_desc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
+	tex_desc.Width = m_client_width;
+	tex_desc.Height = m_client_height;
+	tex_desc.DepthOrArraySize = 1;
+	tex_desc.MipLevels = 1;
+	tex_desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+	tex_desc.SampleDesc.Count = 1;
+	tex_desc.Flags = D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
+
+	D3D12_CLEAR_VALUE clear_value = {};
+
+	clear_value.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+	clear_value.Color[0] = 0.2f;
+	clear_value.Color[1] = 0.3f;
+	clear_value.Color[2] = 0.2f;
+	clear_value.Color[3] = 1.0f;
+
+    CD3DX12_HEAP_PROPERTIES heap_properties(D3D12_HEAP_TYPE_DEFAULT);
+    m_dx12_device->CreateCommittedResource(
+        &heap_properties, D3D12_HEAP_FLAG_NONE,
+        &tex_desc, D3D12_RESOURCE_STATE_RENDER_TARGET, nullptr,
+        IID_PPV_ARGS(&m_off_screen_rt)
+	);
+}
+
+void teapot_render::create_off_screen_rtv_srv_heap()
+{
+    // RTV heap and SRV heap.
+    {
+        D3D12_DESCRIPTOR_HEAP_DESC rtv_heap_desc = {};
+        rtv_heap_desc.NumDescriptors = 1;
+        rtv_heap_desc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
+        rtv_heap_desc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
+        THROW_GRAPHICS_INFO(
+            m_dx12_device->CreateDescriptorHeap(&rtv_heap_desc, IID_PPV_ARGS(&m_off_screen_rtv_heap))
+        );
+    }
+
+	// RTV
+	D3D12_RENDER_TARGET_VIEW_DESC rtv_desc = {};
+	rtv_desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+	rtv_desc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
+	m_dx12_device->CreateRenderTargetView(
+        m_off_screen_rt.Get(), &rtv_desc, m_off_screen_rtv_heap->GetCPUDescriptorHandleForHeapStart()
+    );
+
+	// SRV
+	UINT srv_uav_descriptor_size = m_dx12_device->GetDescriptorHandleIncrementSize(
+		D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV
+	);
+
+	// add the srv-desscriptor to an existing shared heap at index 3.
+	D3D12_CPU_DESCRIPTOR_HANDLE handle{ m_shared_descriptor_heap->GetCPUDescriptorHandleForHeapStart() };
+	handle.ptr += srv_uav_descriptor_size * 3; // after the two descriptors we already have.
+
+	D3D12_SHADER_RESOURCE_VIEW_DESC srv_desc = {};
+	srv_desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+	srv_desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+	srv_desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+	srv_desc.Texture2D.MipLevels = 1;
+	m_dx12_device->CreateShaderResourceView(
+        m_off_screen_rt.Get(), &srv_desc, handle
+    );
 }

@@ -363,7 +363,7 @@ void directx12_graphics::create_descriptor_heap_shared()
 	D3D12_DESCRIPTOR_HEAP_DESC descriptor_shared;
 	::ZeroMemory(&descriptor_shared, sizeof(descriptor_shared));
 	descriptor_shared.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
-	descriptor_shared.NumDescriptors = 5;
+	descriptor_shared.NumDescriptors = 6;
 	descriptor_shared.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
 
 	THROW_GRAPHICS_INFO(

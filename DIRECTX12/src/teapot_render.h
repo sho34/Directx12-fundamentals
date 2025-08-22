@@ -10,6 +10,7 @@
 #include "file_works/file_paths.h"
 
 #include "imgui_graphics/imgui_gfx_window.h"
+#include "render/render_texture.h"
 
 using namespace DirectX;
 class teapot_render : public directx12_graphics
@@ -20,6 +21,7 @@ public:
 
 public:
 	void render();
+	void update(float delta_time);
 	void get_mouse_pos(POINT);
 	void handle_imgui_messages(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 	void toggle_pipeline_state_solid();
@@ -39,6 +41,19 @@ private:
 	ComPtr<ID3D12PipelineState> create_pipeline_state(D3D12_FILL_MODE fillMode, D3D12_CULL_MODE cullMode);
 	// for imgui graphics
 	std::unique_ptr<imgui_gfx> p_imgui_gfx;
+
+private:
+	// for render to texture
+	ComPtr<ID3D12Resource>			m_off_screen_rt;
+	ComPtr<ID3D12DescriptorHeap>	m_off_screen_rtv_heap;
+	ComPtr<ID3D12DescriptorHeap>	m_off_screen_srv_heap;
+
+	// size of the imgui window.
+	float m_imgui_window_width{ 1.0f };
+	float m_imgui_window_height{ 1.0f };
+
+	void create_off_screen_render_target();
+	void create_off_screen_rtv_srv_heap();
 
 private:
 
