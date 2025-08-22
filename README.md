@@ -6,6 +6,10 @@ for starters the sample images below show the teapot that i drew using 16 point 
 > Current Features.
 - It has support for toggling v-sync on and off to increase the frame rate.
 - Supports full screen rendering.
+- Supports offscreen render targets.
+
+> ## SAMPLES OF OFFSCREEN RENDER TARGETS.
+![wire frame offscreen](assets/wire_frame_offscreen.png)
 
 > ## SAMPLE WIRE-FRAME
 ![wire frame](assets/wire-frame.png)
