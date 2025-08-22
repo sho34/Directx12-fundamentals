@@ -22,9 +22,10 @@ public:
 	void render();
 	void get_mouse_pos(POINT);
 	void handle_imgui_messages(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
+	void toggle_pipeline_state_solid();
+	void toggle_pipeline_state_wire_frame();
 
 private:
-	void create_transforms_and_colors_desc_heap();
 	void create_constant_buffer();
 	void load_shaders_to_memory();
 	void create_root_signature();
@@ -32,6 +33,7 @@ private:
 	void create_pipeline_state_solid();
 	void create_view_port();
 	void create_scissor_rect();
+
 
 private:
 	ComPtr<ID3D12PipelineState> create_pipeline_state(D3D12_FILL_MODE fillMode, D3D12_CULL_MODE cullMode);
@@ -46,9 +48,6 @@ private:
 	ComPtr<ID3D12Resource>					m_transforms_buffer;
 	ComPtr<ID3D12Resource>					m_colors_buffer;
 	ComPtr<ID3D12Resource>					m_constant_buffer;
-
-	// descriptor heaps
-	ComPtr<ID3D12DescriptorHeap>			m_transforms_and_colors_desc_heap;
 
 	// shader resources
 	ComPtr<ID3DBlob>						m_vertex_shader_blob;

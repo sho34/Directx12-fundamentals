@@ -89,7 +89,6 @@ public:
 	Keyboard	kbd;
 	Mouse		mouse;
 	Timer		timer;
-	UINT		message;
 
 public:
 	bool		resizing	= false;
@@ -104,10 +103,6 @@ public:
 	int			GetHeight() const;
 
 	void CalculateFrameStats();
-
-public:
-	LPARAM lParam = {};
-	WPARAM wParam = {};
 
 public:
 	std::queue<windows_messages>	message_queue;

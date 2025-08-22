@@ -2,7 +2,7 @@
 #ifndef __App__
 #define __App__
 
-#include "../window.h"
+#include "window/window.h"
 #include "teapot_render.h"
 
 class App

@@ -29,8 +29,8 @@ public:
 public:
 	void init();
 	void setup_window_docking();
-	void render_imgui(void*);
-	void test_window();
+	void render_imgui(void*);// pass a pointer to a command-list
+	void scene_stats();
 
 private:
 	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> m_srv_descriptor_heap;

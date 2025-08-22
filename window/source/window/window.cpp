@@ -1,5 +1,5 @@
 #include "window.h"
-#include "../resource.h"
+#include "resource.h"
 #include "except_macros.h"
 #include "imgui_graphics/imgui_gfx_window.h"
 
@@ -221,7 +221,6 @@ LRESULT Window::HandleMsg(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) noe
 	switch (msg)
 	{
 	case WM_PAINT:
-		message = msg;
 		break;
 	case WM_DESTROY:
 		PostQuitMessage(0);

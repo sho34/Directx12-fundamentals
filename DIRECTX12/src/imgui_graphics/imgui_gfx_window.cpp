@@ -58,9 +58,10 @@ void imgui_gfx::render_imgui(void* renderArgs)
 	);
 }
 
-void imgui_gfx::test_window()
+void imgui_gfx::scene_stats()
 {
-	ImGui::Begin("test window");
+	ImGui::Begin("scene stats window");
+	ImGui::Text("FPS: %.1f", ImGui::GetIO().Framerate);
 	ImGui::End();
 }
 

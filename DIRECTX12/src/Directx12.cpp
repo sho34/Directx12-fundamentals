@@ -85,7 +85,8 @@ void directx12_graphics::update_fps()
 		auto fps = frame_counter / elapsed_seconds;
 		oss << "FPS: " << fps << "\n";
 
-		::OutputDebugStringA(oss.str().c_str());
+		// write the frame stats string to a string.
+		m_frame_stats = oss.str();
 
 		frame_counter = 0;
 		elapsed_seconds = 0.0;
@@ -362,7 +363,7 @@ void directx12_graphics::create_descriptor_heap_shared()
 	D3D12_DESCRIPTOR_HEAP_DESC descriptor_shared;
 	::ZeroMemory(&descriptor_shared, sizeof(descriptor_shared));
 	descriptor_shared.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
-	descriptor_shared.NumDescriptors = 4;
+	descriptor_shared.NumDescriptors = 5;
 	descriptor_shared.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
 
 	THROW_GRAPHICS_INFO(

@@ -114,6 +114,9 @@ protected:
 	std::vector<uint64_t>				m_frame_fence_values;
 	std::vector<ComPtr<ID3D12Fence>>	m_fences;
 
+protected:
+	std::string 						m_frame_stats;
+
 private:
 	// to log the list of available adapters.
 	std::vector<ComPtr<IDXGIAdapter4>>		m_adapter_list;

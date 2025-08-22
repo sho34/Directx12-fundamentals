@@ -157,32 +157,28 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="resource.h" />
-    <ClInclude Include="source\App\App.h" />
-    <ClInclude Include="source\except_macros.h" />
-    <ClInclude Include="source\keyboard\kbd.h" />
-    <ClInclude Include="source\mouse\mouse.h" />
-    <ClInclude Include="source\window.h" />
-    <ClInclude Include="source\WindowExceptions.h" />
-    <ClInclude Include="source\timer\HighResolutionTimer.h" />
-    <ClInclude Include="source\timer\timer.h" />
-    <ClInclude Include="source\wm\windows_messages.h" />
+    <ClInclude Include="source\window\resource.h" />
+    <ClInclude Include="source\App.h" />
+    <ClInclude Include="source\window\except_macros.h" />
+    <ClInclude Include="source\window\keyboard\kbd.h" />
+    <ClInclude Include="source\window\mouse\mouse.h" />
+    <ClInclude Include="source\window\window.h" />
+    <ClInclude Include="source\window\WindowExceptions.h" />
+    <ClInclude Include="source\window\timer\HighResolutionTimer.h" />
+    <ClInclude Include="source\window\timer\timer.h" />
+    <ClInclude Include="source\window\wm\windows_messages.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="source\App\App.cpp" />
-    <ClCompile Include="source\App\main.cpp" />
-    <ClCompile Include="source\keyboard\kbd.cpp" />
-    <ClCompile Include="source\mouse\mouse.cpp" />
-    <ClCompile Include="source\window.cpp" />
-    <ClCompile Include="source\WindowExceptions.cpp" />
-    <ClCompile Include="source\timer\timer.cpp" />
+    <ClCompile Include="source\App.cpp" />
+    <ClCompile Include="source\main.cpp" />
+    <ClCompile Include="source\window\keyboard\kbd.cpp" />
+    <ClCompile Include="source\window\mouse\mouse.cpp" />
+    <ClCompile Include="source\window\window.cpp" />
+    <ClCompile Include="source\window\WindowExceptions.cpp" />
+    <ClCompile Include="source\window\timer\timer.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ResourceCompile Include="window.rc" />
-  </ItemGroup>
-  <ItemGroup>
-    <Image Include="..\resources\eye.ico" />
-    <Image Include="..\resources\x-icon.ico" />
+    <ResourceCompile Include="source\window\window.rc" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\DIRECTX12\DIRECTX12.vcxproj">

@@ -64,7 +64,6 @@ void App::render_frames() const
 		p_teapot_graphics->activate_v_sync_parameters();
 		p_teapot_graphics->update_fps();
 		p_teapot_graphics->render();
-		//p_teapot_graphics->imgui_test_render();
 	}
 	else
 	{
@@ -97,6 +96,14 @@ void App::handle_kbd_messages()
 		if(wnd.kbd.KeyIsPressed('V'))
 		{
 			p_teapot_graphics->toggle_v_sync();
+		}
+		if (wnd.kbd.KeyIsPressed('W'))
+		{
+			p_teapot_graphics->toggle_pipeline_state_wire_frame();
+		}
+		if (wnd.kbd.KeyIsPressed('S'))
+		{
+			p_teapot_graphics->toggle_pipeline_state_solid();
 		}
 	}
 }

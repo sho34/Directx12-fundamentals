@@ -41,7 +41,6 @@ teapot_render::teapot_render(HWND hWnd, int width, int height)
     using transform_type = decltype(TeapotData::patchesTransforms)::value_type;
     using color_type = decltype(TeapotData::patchesColors)::value_type;
 
-    create_transforms_and_colors_desc_heap();
     
     //fill the m_transforms_and_colors_desc_heap with 2 descriptors ()
     auto transform_gpu_handle = utility_functions::create_srv<transform_type>(
@@ -66,7 +65,6 @@ teapot_render::teapot_render(HWND hWnd, int width, int height)
     create_pipeline_state_solid();
     create_view_port();
     create_scissor_rect();
-
 }
 
 teapot_render::~teapot_render()
@@ -88,7 +86,7 @@ void teapot_render::render()
 
     // #3
     m_command_list->SetPipelineState(m_curr_pipeline_state.Get());
-    m_command_list->SetGraphicsRootSignature(m_root_signature.Get());
+    //m_command_list->SetGraphicsRootSignature(m_root_signature.Get());
     m_command_list->RSSetViewports(1, &m_view_port);
     m_command_list->RSSetScissorRects(1, &m_scissor_rect);
 
@@ -97,15 +95,13 @@ void teapot_render::render()
     ID3D12Resource* current_buffer{ m_swap_chain_buffers[frame_index].Get() };
 
     // #5
-    D3D12_RESOURCE_BARRIER barrier_desc;
-	ZeroMemory(&barrier_desc, sizeof(barrier_desc));
-	barrier_desc.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-	barrier_desc.Transition.pResource = current_buffer;
-	barrier_desc.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
-	barrier_desc.Transition.StateBefore = D3D12_RESOURCE_STATE_PRESENT;
-	barrier_desc.Transition.StateAfter = D3D12_RESOURCE_STATE_RENDER_TARGET;
-	barrier_desc.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
-    m_command_list->ResourceBarrier(1, &barrier_desc);
+    CD3DX12_RESOURCE_BARRIER barrier_desc_rt{
+        CD3DX12_RESOURCE_BARRIER::Transition(
+			current_buffer, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET
+        ) 
+    };
+
+    m_command_list->ResourceBarrier(1, &barrier_desc_rt);
 
     // #6 offsetting to the descriptor handle for that buffer.
     D3D12_CPU_DESCRIPTOR_HANDLE desc_handle_rtv{ m_rtv_descriptor_heap->GetCPUDescriptorHandleForHeapStart() };
@@ -123,96 +119,95 @@ void teapot_render::render()
         m_dsv_descriptor_heap->GetCPUDescriptorHandleForHeapStart(), D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr
     );
 
-    m_command_list->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_16_CONTROL_POINT_PATCHLIST);
 
-    // #8
-    std::vector<D3D12_VERTEX_BUFFER_VIEW> my_array{ m_control_points_buffer_view };
-    m_command_list->IASetVertexBuffers(0, static_cast<UINT>(my_array.size()), my_array.data());
+ //   m_command_list->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_16_CONTROL_POINT_PATCHLIST);
 
-    // #9
-    std::vector<int> root_constants{ m_tess_factor, m_tess_factor };
-    m_command_list->SetGraphicsRoot32BitConstants(
-        1, static_cast<UINT>(root_constants.size()), root_constants.data(), 0
-    );
+ //   // #8
+ //   std::vector<D3D12_VERTEX_BUFFER_VIEW> my_array{ m_control_points_buffer_view };
+ //   m_command_list->IASetVertexBuffers(0, static_cast<UINT>(my_array.size()), my_array.data());
+
+ //   // #9
+ //   std::vector<int> root_constants{ m_tess_factor, m_tess_factor };
+ //   m_command_list->SetGraphicsRoot32BitConstants(
+ //       1, static_cast<UINT>(root_constants.size()), root_constants.data(), 0
+ //   );
 
 
     // #10 pass the address of the first descriptor 
     ID3D12DescriptorHeap* pp_heaps[] = { m_shared_descriptor_heap.Get() };
     m_command_list->SetDescriptorHeaps(_countof(pp_heaps), pp_heaps);
 
-    D3D12_GPU_DESCRIPTOR_HANDLE d{ m_shared_descriptor_heap->GetGPUDescriptorHandleForHeapStart() };
-    d.ptr += 0;
-    m_command_list->SetGraphicsRootDescriptorTable(2, d);
+ //   D3D12_GPU_DESCRIPTOR_HANDLE d{ m_shared_descriptor_heap->GetGPUDescriptorHandleForHeapStart() };
+ //   d.ptr += 0;
+ //   m_command_list->SetGraphicsRootDescriptorTable(2, d);
 
-    // #11
-    float aspect_ratio{ static_cast<float>(m_client_height) / static_cast<float>(m_client_height) };
-    XMMATRIX proj_matrix_dx{ XMMatrixPerspectiveFovLH(XMConvertToRadians(45), aspect_ratio, 1.0f, 100.0f) };
+ //   // #11
+ //   float aspect_ratio{ static_cast<float>(m_client_width) / static_cast<float>(m_client_height) };
+ //   XMMATRIX proj_matrix_dx{ XMMatrixPerspectiveFovLH(XMConvertToRadians(45), aspect_ratio, 1.0f, 100.0f) };
 
-	XMVECTOR cam_pos_dx(XMVectorSet(0.0f, 0.0f, -10.0f, 0.0f));
-	XMVECTOR cam_look_at_dx(XMVectorSet(0.0f, 0.0f, 0.0f, 0.0f));
-	XMVECTOR cam_up_dx(XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f));
-	XMMATRIX view_matrix_dx{ XMMatrixLookAtLH(cam_pos_dx, cam_look_at_dx, cam_up_dx) };
+	//XMVECTOR cam_pos_dx(XMVectorSet(0.0f, 0.0f, -10.0f, 0.0f));
+	//XMVECTOR cam_look_at_dx(XMVectorSet(0.0f, 0.0f, 0.0f, 0.0f));
+	//XMVECTOR cam_up_dx(XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f));
+	//XMMATRIX view_matrix_dx{ XMMatrixLookAtLH(cam_pos_dx, cam_look_at_dx, cam_up_dx) };
 
-    XMMATRIX view_proj_matrix_dx{ view_matrix_dx * proj_matrix_dx };
+ //   XMMATRIX view_proj_matrix_dx{ view_matrix_dx * proj_matrix_dx };
 
-    UINT const_data_size_aligned{ (sizeof(XMFLOAT4X4) + 255) & ~255 };
-    float pitch{
-        -XMConvertToRadians(
-            (m_mouse_position.x - (static_cast<float>(m_client_width) / 2.0f)) / 
-            (static_cast<float>(m_client_width) / 2.0f) * 180.0f
-        )
-    };
+ //   UINT const_data_size_aligned{ (sizeof(XMFLOAT4X4) + 255) & ~255 };
+ //   float pitch{
+ //       -XMConvertToRadians(
+ //           (m_mouse_position.x - (static_cast<float>(m_client_width) / 2.0f)) / 
+ //           (static_cast<float>(m_client_width) / 2.0f) * 180.0f
+ //       )
+ //   };
 
-    float roll{
-        XMConvertToRadians(
-            (m_mouse_position.y - (static_cast<float>(m_client_height) / 2.0f)) /
-            (static_cast<float>(m_client_height) / 2.0f) * 180.0f
-        )
-    };
+ //   float roll{
+ //       XMConvertToRadians(
+ //           (m_mouse_position.y - (static_cast<float>(m_client_height) / 2.0f)) /
+ //           (static_cast<float>(m_client_height) / 2.0f) * 180.0f
+ //       )
+ //   };
 
-	XMMATRIX model_matrix_rotation_dx{ XMMatrixRotationRollPitchYaw(roll, pitch, 0.0f) };
-	XMMATRIX model_matrix_translation_dx{ XMMatrixTranslation(0.0f, -1.0f, 0.0f) };
-	XMMATRIX model_matrix_dx{ model_matrix_rotation_dx * model_matrix_translation_dx };
+	//XMMATRIX model_matrix_rotation_dx{ XMMatrixRotationRollPitchYaw(roll, pitch, 0.0f) };
+	//XMMATRIX model_matrix_translation_dx{ XMMatrixTranslation(0.0f, -1.0f, 0.0f) };
+	//XMMATRIX model_matrix_dx{ model_matrix_rotation_dx * model_matrix_translation_dx };
 
-    XMFLOAT4X4 mvp_matrix;
-    XMStoreFloat4x4(&mvp_matrix, model_matrix_dx * view_proj_matrix_dx);
+ //   XMFLOAT4X4 mvp_matrix;
+ //   XMStoreFloat4x4(&mvp_matrix, model_matrix_dx * view_proj_matrix_dx);
 
-    // #12
-    D3D12_RANGE read_range = { 0, 0 };
-    uint8_t* cbv_data_begin;
-    m_constant_buffer->Map(0, &read_range, reinterpret_cast<void**>(&cbv_data_begin));
-    ::memcpy(&cbv_data_begin[frame_index * const_data_size_aligned], &mvp_matrix, sizeof(mvp_matrix));
-    m_constant_buffer->Unmap(0, nullptr);
+ //   // #12
+ //   D3D12_RANGE read_range = { 0, 0 };
+ //   uint8_t* cbv_data_begin;
+ //   m_constant_buffer->Map(0, &read_range, reinterpret_cast<void**>(&cbv_data_begin));
+ //   ::memcpy(&cbv_data_begin[frame_index * const_data_size_aligned], &mvp_matrix, sizeof(mvp_matrix));
+ //   m_constant_buffer->Unmap(0, nullptr);
 
-    // #13
-    m_command_list->SetGraphicsRootConstantBufferView(
-        0, m_constant_buffer->GetGPUVirtualAddress() + frame_index * const_data_size_aligned
-    );
+ //   // #13
+ //   m_command_list->SetGraphicsRootConstantBufferView(
+ //       0, m_constant_buffer->GetGPUVirtualAddress() + frame_index * const_data_size_aligned
+ //   );
 
-    // #14
-    m_command_list->IASetIndexBuffer(&m_control_points_index_buffer_view);
-
-
-    // #15
-    uint32_t num_indices{ m_control_points_index_buffer_view.SizeInBytes / sizeof(uint32_t) };
-    m_command_list->DrawIndexedInstanced(num_indices, 1, 0, 0, 0);
+ //   // #14
+ //   m_command_list->IASetIndexBuffer(&m_control_points_index_buffer_view);
 
 
-	// initialize imgui
+ //   // #15
+ //   uint32_t num_indices{ m_control_points_index_buffer_view.SizeInBytes / sizeof(uint32_t) };
+ //   m_command_list->DrawIndexedInstanced(num_indices, 1, 0, 0, 0);
+
+
+	// render imgui
 	p_imgui_gfx->init();
-	p_imgui_gfx->test_window();
+	p_imgui_gfx->scene_stats();
     p_imgui_gfx->render_imgui(m_command_list.Get());
 
     // #16
-	::ZeroMemory(&barrier_desc, sizeof(barrier_desc));
-	barrier_desc.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-	barrier_desc.Transition.pResource = current_buffer;
-	barrier_desc.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
-	barrier_desc.Transition.StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET;
-	barrier_desc.Transition.StateAfter = D3D12_RESOURCE_STATE_PRESENT;
-	barrier_desc.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
+	CD3DX12_RESOURCE_BARRIER barrier_desc_present{
+	    CD3DX12_RESOURCE_BARRIER::Transition(
+		    current_buffer, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT
+	    )
+	};
 
-    m_command_list->ResourceBarrier(1, &barrier_desc);
+    m_command_list->ResourceBarrier(1, &barrier_desc_present);
 
     // #17
     THROW_GRAPHICS_INFO(m_command_list->Close());
@@ -235,6 +230,7 @@ void teapot_render::render()
 
 }
 
+
 void teapot_render::get_mouse_pos(POINT mouse_pos)
 {
 #if defined(_DEBUG)
@@ -254,19 +250,16 @@ void teapot_render::handle_imgui_messages(HWND hWnd, UINT msg, WPARAM wParam, LP
     ImGui_ImplWin32_WndProcHandler(hWnd, msg, wParam, lParam);
 }
 
-void teapot_render::create_transforms_and_colors_desc_heap()
+void teapot_render::toggle_pipeline_state_solid()
 {
-    D3D12_DESCRIPTOR_HEAP_DESC heap_descriptor;
-    ::ZeroMemory(&heap_descriptor, sizeof(heap_descriptor));
-    heap_descriptor.NumDescriptors = 2;
-	heap_descriptor.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
-	heap_descriptor.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
-    heap_descriptor.NodeMask = 0;
-
-    THROW_GRAPHICS_INFO(
-        m_dx12_device->CreateDescriptorHeap(&heap_descriptor, IID_PPV_ARGS(&m_transforms_and_colors_desc_heap))
-    );
+    m_curr_pipeline_state = m_pipeline_state_solid;
 }
+
+void teapot_render::toggle_pipeline_state_wire_frame()
+{
+	m_curr_pipeline_state = m_pipeline_state_wire_frame;
+}
+
 
 void teapot_render::create_constant_buffer()
 {
@@ -332,6 +325,8 @@ void teapot_render::load_shaders_to_memory()
 
 void teapot_render::create_root_signature()
 {
+    // * THIS IS A FUNCTION WHERE THE INPUTS TO THE SHADERS ARE DECLARED.
+
     // #1
     D3D12_DESCRIPTOR_RANGE dsv_transfrm_and_color_srv_range;
     ::ZeroMemory(&dsv_transfrm_and_color_srv_range, sizeof(dsv_transfrm_and_color_srv_range));
@@ -407,27 +402,20 @@ void teapot_render::create_root_signature()
 void teapot_render::create_pipeline_state_wire_frame()
 {
     m_pipeline_state_wire_frame = create_pipeline_state(D3D12_FILL_MODE_WIREFRAME, D3D12_CULL_MODE_NONE);
-    //m_curr_pipeline_state = m_pipeline_state_wire_frame;
+    m_curr_pipeline_state = m_pipeline_state_wire_frame;
 }
 
 void teapot_render::create_pipeline_state_solid()
 {
     m_pipeline_state_solid = create_pipeline_state(D3D12_FILL_MODE_SOLID, D3D12_CULL_MODE_NONE);
-    m_curr_pipeline_state = m_pipeline_state_solid;
 }
 
 void teapot_render::create_view_port()
 {
-	RECT rect;
-	if (!GetClientRect(m_hwnd, &rect))
-	{
-		throw(std::runtime_error{ "Error getting window size." });
-	}
-
 	m_view_port.TopLeftX = 0.0f;
     m_view_port.TopLeftY = 0.0f;
-    m_view_port.Width = static_cast<FLOAT>(rect.right - rect.left);
-    m_view_port.Height = static_cast<FLOAT>(rect.bottom - rect.top);
+    m_view_port.Width = static_cast<FLOAT>(m_client_width);
+    m_view_port.Height = static_cast<FLOAT>(m_client_height);
     m_view_port.MinDepth = 0.0f;
     m_view_port.MaxDepth = 1.0f;
 }
@@ -445,6 +433,7 @@ void teapot_render::create_scissor_rect()
 	m_scissor_rect.right = rect.right - rect.left;
 	m_scissor_rect.bottom = rect.bottom - rect.top;
 }
+
 
 ComPtr<ID3D12PipelineState> teapot_render::create_pipeline_state(D3D12_FILL_MODE fillMode, D3D12_CULL_MODE cullMode)
 {
