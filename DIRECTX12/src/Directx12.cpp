@@ -201,7 +201,7 @@ void directx12_graphics::log_available_graphics_adapters()
 		woss << "*[sys memory]: " << adapterDesc.DedicatedSystemMemory * to_gb << " GB" << "\n";
 		woss << "*[video memory]: " << adapterDesc.DedicatedVideoMemory * to_gb << " GB\n";
 		woss << "*[shared sys memory]: " << adapterDesc.SharedSystemMemory * to_gb << " GB\n";
-		woss << "**************************************************\n\n" << std::endl;
+		woss << "**************************************************\n" << std::endl;
 	}
 	// save the adapter details.
 	adapater_details = woss.str();

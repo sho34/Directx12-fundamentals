@@ -212,8 +212,11 @@
     <ClInclude Include="src\imgui_graphics\imgui\imstb_textedit.h" />
     <ClInclude Include="src\imgui_graphics\imgui\imstb_truetype.h" />
     <ClInclude Include="src\imgui_graphics\imgui_gfx_window.h" />
+    <ClInclude Include="src\pipeline\pipeline_effects.h" />
+    <ClInclude Include="src\pipeline\pipeline_state_object.h" />
     <ClInclude Include="src\render\frame_resources.h" />
-    <ClInclude Include="src\render\render_texture.h" />
+    <ClInclude Include="src\render\scene_renderer.h" />
+    <ClInclude Include="src\render\texture_renderer.h" />
     <ClInclude Include="src\teapot_data\TeapotData.h" />
     <ClInclude Include="src\teapot_render.h" />
   </ItemGroup>
@@ -230,7 +233,8 @@
     <ClCompile Include="src\imgui_graphics\imgui\imgui_tables.cpp" />
     <ClCompile Include="src\imgui_graphics\imgui\imgui_widgets.cpp" />
     <ClCompile Include="src\imgui_graphics\imgui_gfx_window.cpp" />
-    <ClCompile Include="src\render\render_texture.cpp" />
+    <ClCompile Include="src\pipeline\pipeline_state_object.cpp" />
+    <ClCompile Include="src\render\texture_renderer.cpp" />
     <ClCompile Include="src\teapot_data\TeapotData.cpp" />
     <ClCompile Include="src\teapot_render.cpp" />
   </ItemGroup>

@@ -60,22 +60,20 @@ teapot_render::teapot_render(HWND hWnd, int width, int height)
     );
 
     create_constant_buffer();
-    load_shaders_to_memory();
     create_root_signature();
     create_pipeline_state_wire_frame();
     create_pipeline_state_solid();
     create_view_port();
     create_scissor_rect();
-
-	// off-screen render target.
-    create_off_screen_render_target();
-	create_off_screen_rtv_srv_heap();
+    
+    // make the off-screen render target.
+    m_p_off_screen_rt = std::make_unique<texture>(
+        DXGI_FORMAT_R8G8B8A8_UNORM, m_dx12_device.Get(), m_shared_descriptor_heap.Get(), 3, 800, 800
+    );
 }
 
 teapot_render::~teapot_render()
-{
-
-}
+{}
 
 void teapot_render::render()
 {
@@ -93,6 +91,7 @@ void teapot_render::render()
 
     // #3
     m_command_list->SetPipelineState(m_curr_pipeline_state.Get());
+    m_command_list->RSSetViewports(1, &m_view_port);
     m_command_list->RSSetScissorRects(1, &m_scissor_rect);
 
 
@@ -129,25 +128,16 @@ void teapot_render::render()
     ID3D12DescriptorHeap* pp_heaps[] = { m_shared_descriptor_heap.Get() };
     m_command_list->SetDescriptorHeaps(_countof(pp_heaps), pp_heaps);
 
-
 	// render imgui
 	p_imgui_gfx->init();
 	p_imgui_gfx->scene_stats();
-    
-	ImGui::Begin("Teapot View");
-	// display the off-screen render target inside an imgui window.
-    D3D12_GPU_DESCRIPTOR_HANDLE handle{ m_shared_descriptor_heap->GetGPUDescriptorHandleForHeapStart() };
-	handle.ptr += 3 * m_dx12_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-	ImTextureID tex_id = reinterpret_cast<void*>(handle.ptr);
+    m_imgui_window_dimensions = ImGui::GetContentRegionAvail();
 
-    ImVec2 contentSize = ImGui::GetContentRegionAvail(); // Size available for rendering
+	ImGuiWindow* window = ImGui::GetCurrentWindow();
+    m_imgui_window = window;
+	m_im_scissor_rect = window->ClipRect; // In screen space (pixels)
 
-	m_imgui_window_width = contentSize.x;
-	m_imgui_window_height = contentSize.y;
-
-	ImGui::Image(tex_id, contentSize);
-	ImGui::End();
-
+    p_imgui_gfx->draw_scene(3, m_imgui_window_dimensions);
     p_imgui_gfx->render_imgui(m_command_list.Get());
 
     // #16
@@ -197,42 +187,51 @@ void teapot_render::update(float delta_time)
 	m_command_list->SetPipelineState(m_curr_pipeline_state.Get());
     m_command_list->SetGraphicsRootSignature(m_root_signature.Get());
 
-	D3D12_VIEWPORT vp = {};
-	vp.TopLeftX = ImGui::GetMainViewport()->Pos.x;
-	vp.TopLeftY = ImGui::GetMainViewport()->Pos.y;
-	vp.Width = ImGui::GetMainViewport()->Size.x;
-	vp.Height = ImGui::GetMainViewport()->Size.y;
-	vp.MinDepth = 0.0f;
-	vp.MaxDepth = 1.0f;
+    D3D12_VIEWPORT vp = {};
+    D3D12_RECT scissor_rect = {};
+    if (m_imgui_window != nullptr)
+    {
+		vp.TopLeftX = m_imgui_window->Pos.x;
+		vp.TopLeftY = m_imgui_window->Pos.y;
+		vp.Width = m_imgui_window->Size.x;
+		vp.Height = m_imgui_window->Size.y;
+		vp.MinDepth = 0.0f;
+		vp.MaxDepth = 1.0f;
+
+        // set the scissor rects.
+		scissor_rect.left = (LONG)m_imgui_window->Rect().Min.x;
+		scissor_rect.top = (LONG)m_imgui_window->Rect().Min.y;
+		scissor_rect.right = (LONG)m_imgui_window->Rect().Max.x;
+		scissor_rect.bottom = (LONG)m_imgui_window->Rect().Max.y;
+
+    }
 
     m_command_list->RSSetViewports(1, &vp);
-	m_command_list->RSSetScissorRects(1, &m_scissor_rect);
+	m_command_list->RSSetScissorRects(1, &scissor_rect);
 
 	// #4 index into the buffer vector and fetch the buffer for current frame rendering.
-	ID3D12Resource* current_buffer{ m_swap_chain_buffers[frame_index].Get() };
-
+	ID3D12Resource* current_buffer{ m_p_off_screen_rt->get_resource().Get() };
 
 	// #5
 	CD3DX12_RESOURCE_BARRIER barrier_desc_rt{
 		CD3DX12_RESOURCE_BARRIER::Transition(
-			current_buffer, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE
+			current_buffer, D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_RENDER_TARGET
 		)
 	};
 
 	m_command_list->ResourceBarrier(1, &barrier_desc_rt);
 
 	// #6 offsetting to the descriptor handle for that buffer.
-	D3D12_CPU_DESCRIPTOR_HANDLE desc_handle_rtv{ m_off_screen_rtv_heap->GetCPUDescriptorHandleForHeapStart() };
-	D3D12_CPU_DESCRIPTOR_HANDLE desc_handle_dsv{ m_dsv_descriptor_heap->GetCPUDescriptorHandleForHeapStart() };
+	D3D12_CPU_DESCRIPTOR_HANDLE desc_handle_rtv{ m_p_off_screen_rt->get_rtv_cpu_handle() };
+	D3D12_CPU_DESCRIPTOR_HANDLE desc_handle_dsv{ m_p_off_screen_rt->get_dsv_cpu_handle() };
 
 	// set our current back buffer as the render target.
 	m_command_list->OMSetRenderTargets(1, &desc_handle_rtv, FALSE, &desc_handle_dsv);
 
-	// #7 paint it with the color below.
-	static float clear_color[]{ 0.2f, 0.5f, 0.9f, 1.0f };
-	m_command_list->ClearRenderTargetView(desc_handle_rtv, clear_color, 0, nullptr);
+    m_p_off_screen_rt->clear_texture(m_command_list.Get());
+
 	m_command_list->ClearDepthStencilView(
-		m_dsv_descriptor_heap->GetCPUDescriptorHandleForHeapStart(), D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr
+		m_p_off_screen_rt->get_dsv_cpu_handle(), D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr
 	);
 
 	m_command_list->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_16_CONTROL_POINT_PATCHLIST);
@@ -257,7 +256,7 @@ void teapot_render::update(float delta_time)
 	m_command_list->SetGraphicsRootDescriptorTable(2, d);
 
 	// #11
-	float aspect_ratio{ static_cast<float>(m_imgui_window_width) / static_cast<float>(m_imgui_window_height) };
+	float aspect_ratio{ static_cast<float>(1) / static_cast<float>(1) };
 	XMMATRIX proj_matrix_dx{ XMMatrixPerspectiveFovLH(XMConvertToRadians(45), aspect_ratio, 1.0f, 100.0f) };
 
 	XMVECTOR cam_pos_dx(XMVectorSet(0.0f, 0.0f, -10.0f, 0.0f));
@@ -311,7 +310,7 @@ void teapot_render::update(float delta_time)
 
 	CD3DX12_RESOURCE_BARRIER barrier_desc_present{
 	CD3DX12_RESOURCE_BARRIER::Transition(
-		current_buffer, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_PRESENT
+		current_buffer, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_COMMON
 	)
 	};
 
@@ -403,29 +402,6 @@ void teapot_render::create_constant_buffer()
     THROW_GRAPHICS_INFO(m_constant_buffer->SetName(L"per frame constants"));
 }
 
-void teapot_render::load_shaders_to_memory()
-{
-    THROW_GRAPHICS_INFO(
-        D3DReadFileToBlob(
-          AnsiToWString(_FP_("VertexShader.cso")).c_str(),
-            m_vertex_shader_blob.ReleaseAndGetAddressOf())
-    );
-    THROW_GRAPHICS_INFO(
-        D3DReadFileToBlob(
-           AnsiToWString(_FP_("PixelShader.cso")).c_str(), 
-            m_pixel_shader_blob.ReleaseAndGetAddressOf())
-    );
-    THROW_GRAPHICS_INFO(
-        D3DReadFileToBlob(
-            AnsiToWString(_FP_("HullShader.cso")).c_str(),
-            m_hull_shader_blob.ReleaseAndGetAddressOf())
-    );
-    THROW_GRAPHICS_INFO(
-        D3DReadFileToBlob(
-            AnsiToWString(_FP_("DomainShader.cso")).c_str(), 
-            m_domain_shader_blob.ReleaseAndGetAddressOf())
-    );
-}
 
 void teapot_render::create_root_signature()
 {
@@ -505,13 +481,19 @@ void teapot_render::create_root_signature()
 
 void teapot_render::create_pipeline_state_wire_frame()
 {
-    m_pipeline_state_wire_frame = create_pipeline_state(D3D12_FILL_MODE_WIREFRAME, D3D12_CULL_MODE_NONE);
+    wire_frame_pso wire_frame_mode(m_dx12_device.Get(), m_root_signature.Get());
+    wire_frame_mode.initialize();
+
+    m_pipeline_state_wire_frame = wire_frame_mode.get_pso();
     m_curr_pipeline_state = m_pipeline_state_wire_frame;
 }
 
 void teapot_render::create_pipeline_state_solid()
 {
-    m_pipeline_state_solid = create_pipeline_state(D3D12_FILL_MODE_SOLID, D3D12_CULL_MODE_NONE);
+    solid_pso solid_mode(m_dx12_device.Get(), m_root_signature.Get());
+    solid_mode.initialize();
+
+    m_pipeline_state_solid = solid_mode.get_pso();
 }
 
 void teapot_render::create_view_port()
@@ -536,160 +518,4 @@ void teapot_render::create_scissor_rect()
 	m_scissor_rect.top = 0;
 	m_scissor_rect.right = rect.right - rect.left;
 	m_scissor_rect.bottom = rect.bottom - rect.top;
-}
-
-
-ComPtr<ID3D12PipelineState> teapot_render::create_pipeline_state(D3D12_FILL_MODE fillMode, D3D12_CULL_MODE cullMode)
-{
-    // #1
-    std::vector<D3D12_INPUT_ELEMENT_DESC> input_element_descriptors
-    {
-        { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 }
-    };
-
-    // #2
-    D3D12_RASTERIZER_DESC rasterizer_desc;
-    ::ZeroMemory(&rasterizer_desc, sizeof(rasterizer_desc));
-    rasterizer_desc.FillMode = fillMode;
-    rasterizer_desc.CullMode = cullMode;
-    rasterizer_desc.FrontCounterClockwise = FALSE;
-    rasterizer_desc.DepthBias = D3D12_DEFAULT_DEPTH_BIAS;
-    rasterizer_desc.DepthBiasClamp = D3D12_DEFAULT_DEPTH_BIAS_CLAMP;
-    rasterizer_desc.SlopeScaledDepthBias = D3D12_DEFAULT_SLOPE_SCALED_DEPTH_BIAS;
-	rasterizer_desc.DepthClipEnable = TRUE;
-	rasterizer_desc.MultisampleEnable = FALSE;
-	rasterizer_desc.AntialiasedLineEnable = FALSE;
-	rasterizer_desc.ForcedSampleCount = 0;
-    rasterizer_desc.ConservativeRaster = D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF;
-
-
-    // #3
-    D3D12_BLEND_DESC  blend_desc;
-    ::ZeroMemory(&blend_desc, sizeof(blend_desc));
-    blend_desc.AlphaToCoverageEnable = FALSE;
-    blend_desc.IndependentBlendEnable = FALSE;
-    blend_desc.RenderTarget[0] = {
-        FALSE, FALSE,
-        D3D12_BLEND_ONE, D3D12_BLEND_ZERO, D3D12_BLEND_OP_ADD,
-        D3D12_BLEND_ONE, D3D12_BLEND_ZERO, D3D12_BLEND_OP_ADD,
-        D3D12_LOGIC_OP_NOOP,
-        D3D12_COLOR_WRITE_ENABLE_ALL
-    };
-
-    // #4 
-    D3D12_DEPTH_STENCIL_DESC depth_stencil_desc;
-    ::ZeroMemory(&depth_stencil_desc, sizeof(depth_stencil_desc));
-	depth_stencil_desc.DepthEnable = TRUE;
-    depth_stencil_desc.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL;
-    depth_stencil_desc.DepthFunc = D3D12_COMPARISON_FUNC_LESS;
-    depth_stencil_desc.StencilEnable = FALSE;
-    depth_stencil_desc.StencilReadMask = D3D12_DEFAULT_STENCIL_READ_MASK;
-    depth_stencil_desc.StencilWriteMask = D3D12_DEFAULT_STENCIL_WRITE_MASK;
-	const D3D12_DEPTH_STENCILOP_DESC default_stencil_op = { 
-        D3D12_STENCIL_OP_KEEP, D3D12_STENCIL_OP_KEEP, D3D12_STENCIL_OP_KEEP, D3D12_COMPARISON_FUNC_ALWAYS 
-    };
-    depth_stencil_desc.FrontFace = default_stencil_op;
-    depth_stencil_desc.BackFace = default_stencil_op;
-
-    // #5
-	D3D12_GRAPHICS_PIPELINE_STATE_DESC pipeline_state_desc;
-	ZeroMemory(&pipeline_state_desc, sizeof(pipeline_state_desc));
-
-	pipeline_state_desc.InputLayout = { 
-        input_element_descriptors.data(), static_cast<UINT>(input_element_descriptors.size()) 
-    };
-
-	pipeline_state_desc.pRootSignature = m_root_signature.Get();
-
-	pipeline_state_desc.VS = { m_vertex_shader_blob->GetBufferPointer(), m_vertex_shader_blob->GetBufferSize() };
-	pipeline_state_desc.HS = { m_hull_shader_blob->GetBufferPointer(), m_hull_shader_blob->GetBufferSize() };
-	pipeline_state_desc.DS = { m_domain_shader_blob->GetBufferPointer(), m_domain_shader_blob->GetBufferSize() };
-	pipeline_state_desc.PS = { m_pixel_shader_blob->GetBufferPointer(), m_pixel_shader_blob->GetBufferSize() };
-
-	pipeline_state_desc.RasterizerState = rasterizer_desc;
-	pipeline_state_desc.BlendState = blend_desc;
-	pipeline_state_desc.DepthStencilState = depth_stencil_desc;
-	pipeline_state_desc.SampleMask = UINT_MAX;
-	pipeline_state_desc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_PATCH;
-	pipeline_state_desc.NumRenderTargets = 1;
-	pipeline_state_desc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
-	pipeline_state_desc.DSVFormat = DXGI_FORMAT_D32_FLOAT;
-	pipeline_state_desc.SampleDesc.Count = 1;
-
-    ComPtr<ID3D12PipelineState> pipeline_state;
-    THROW_GRAPHICS_INFO(
-        m_dx12_device->CreateGraphicsPipelineState(
-            &pipeline_state_desc, IID_PPV_ARGS(pipeline_state.ReleaseAndGetAddressOf())
-        )
-    );
-
-    return pipeline_state;
-}
-
-void teapot_render::create_off_screen_render_target()
-{
-	D3D12_RESOURCE_DESC tex_desc = {};
-	tex_desc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
-	tex_desc.Width = m_client_width;
-	tex_desc.Height = m_client_height;
-	tex_desc.DepthOrArraySize = 1;
-	tex_desc.MipLevels = 1;
-	tex_desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-	tex_desc.SampleDesc.Count = 1;
-	tex_desc.Flags = D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
-
-	D3D12_CLEAR_VALUE clear_value = {};
-
-	clear_value.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-	clear_value.Color[0] = 0.2f;
-	clear_value.Color[1] = 0.3f;
-	clear_value.Color[2] = 0.2f;
-	clear_value.Color[3] = 1.0f;
-
-    CD3DX12_HEAP_PROPERTIES heap_properties(D3D12_HEAP_TYPE_DEFAULT);
-    m_dx12_device->CreateCommittedResource(
-        &heap_properties, D3D12_HEAP_FLAG_NONE,
-        &tex_desc, D3D12_RESOURCE_STATE_RENDER_TARGET, nullptr,
-        IID_PPV_ARGS(&m_off_screen_rt)
-	);
-}
-
-void teapot_render::create_off_screen_rtv_srv_heap()
-{
-    // RTV heap and SRV heap.
-    {
-        D3D12_DESCRIPTOR_HEAP_DESC rtv_heap_desc = {};
-        rtv_heap_desc.NumDescriptors = 1;
-        rtv_heap_desc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
-        rtv_heap_desc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
-        THROW_GRAPHICS_INFO(
-            m_dx12_device->CreateDescriptorHeap(&rtv_heap_desc, IID_PPV_ARGS(&m_off_screen_rtv_heap))
-        );
-    }
-
-	// RTV
-	D3D12_RENDER_TARGET_VIEW_DESC rtv_desc = {};
-	rtv_desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-	rtv_desc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
-	m_dx12_device->CreateRenderTargetView(
-        m_off_screen_rt.Get(), &rtv_desc, m_off_screen_rtv_heap->GetCPUDescriptorHandleForHeapStart()
-    );
-
-	// SRV
-	UINT srv_uav_descriptor_size = m_dx12_device->GetDescriptorHandleIncrementSize(
-		D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV
-	);
-
-	// add the srv-desscriptor to an existing shared heap at index 3.
-	D3D12_CPU_DESCRIPTOR_HANDLE handle{ m_shared_descriptor_heap->GetCPUDescriptorHandleForHeapStart() };
-	handle.ptr += srv_uav_descriptor_size * 3; // after the two descriptors we already have.
-
-	D3D12_SHADER_RESOURCE_VIEW_DESC srv_desc = {};
-	srv_desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-	srv_desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
-	srv_desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-	srv_desc.Texture2D.MipLevels = 1;
-	m_dx12_device->CreateShaderResourceView(
-        m_off_screen_rt.Get(), &srv_desc, handle
-    );
 }

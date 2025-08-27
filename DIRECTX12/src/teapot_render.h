@@ -10,7 +10,8 @@
 #include "file_works/file_paths.h"
 
 #include "imgui_graphics/imgui_gfx_window.h"
-#include "render/render_texture.h"
+#include "render/texture_renderer.h"
+#include "pipeline/pipeline_effects.h"
 
 using namespace DirectX;
 class teapot_render : public directx12_graphics
@@ -29,7 +30,6 @@ public:
 
 private:
 	void create_constant_buffer();
-	void load_shaders_to_memory();
 	void create_root_signature();
 	void create_pipeline_state_wire_frame();
 	void create_pipeline_state_solid();
@@ -38,22 +38,14 @@ private:
 
 
 private:
-	ComPtr<ID3D12PipelineState> create_pipeline_state(D3D12_FILL_MODE fillMode, D3D12_CULL_MODE cullMode);
 	// for imgui graphics
 	std::unique_ptr<imgui_gfx> p_imgui_gfx;
 
 private:
-	// for render to texture
-	ComPtr<ID3D12Resource>			m_off_screen_rt;
-	ComPtr<ID3D12DescriptorHeap>	m_off_screen_rtv_heap;
-	ComPtr<ID3D12DescriptorHeap>	m_off_screen_srv_heap;
-
-	// size of the imgui window.
-	float m_imgui_window_width{ 1.0f };
-	float m_imgui_window_height{ 1.0f };
-
-	void create_off_screen_render_target();
-	void create_off_screen_rtv_srv_heap();
+	std::unique_ptr<texture>		m_p_off_screen_rt;
+	ImVec2							m_imgui_window_dimensions{ 100.0f, 100.0f };
+	ImGuiWindow*					m_imgui_window;
+	ImRect							m_im_scissor_rect;
 
 private:
 
@@ -63,12 +55,6 @@ private:
 	ComPtr<ID3D12Resource>					m_transforms_buffer;
 	ComPtr<ID3D12Resource>					m_colors_buffer;
 	ComPtr<ID3D12Resource>					m_constant_buffer;
-
-	// shader resources
-	ComPtr<ID3DBlob>						m_vertex_shader_blob;
-	ComPtr<ID3DBlob>						m_hull_shader_blob;
-	ComPtr<ID3DBlob>						m_domain_shader_blob;
-	ComPtr<ID3DBlob>						m_pixel_shader_blob;
 
 	// root signature
 	ComPtr<ID3D12RootSignature>				m_root_signature;
@@ -90,7 +76,6 @@ private:
 	int					m_tess_factor{ 8 };
 	const int			m_num_parts{ 28 };
 	POINT				m_mouse_position;
-	std::wstring		m_shader_dir{ get_file_pathw(L"output\\Debug\\x64")};
 };
 
 #endif

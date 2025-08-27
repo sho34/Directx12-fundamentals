@@ -78,10 +78,19 @@
     <ClInclude Include="src\render\frame_resources.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\render\render_texture.h">
+    <ClInclude Include="src\dx_utils\directx12_helpers.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\dx_utils\directx12_helpers.h">
+    <ClInclude Include="src\render\texture_renderer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\render\scene_renderer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\pipeline\pipeline_state_object.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\pipeline\pipeline_effects.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -128,7 +137,10 @@
     <ClCompile Include="src\imgui_graphics\imgui\imgui_widgets.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\render\render_texture.cpp">
+    <ClCompile Include="src\render\texture_renderer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\pipeline\pipeline_state_object.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

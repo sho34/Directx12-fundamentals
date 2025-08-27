@@ -19,10 +19,14 @@ public:
 	frame_resource& operator=(const frame_resource&) = delete;
 
 public:
+	// The resources that we are updating.
+
+public:
 	// create a separate resources for each frame to avoid CPU/GPU synchronization.
 	ComPtr<ID3D12CommandAllocator>		m_command_allocator_fr;
-
-
+	// mark all command processing up to this fence value. This lest us check if the resources are still in 
+	// use by the GPU.
+	UINT64 fence_value;
 };
 
 #endif // !__frame_resources__

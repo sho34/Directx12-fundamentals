@@ -4,9 +4,10 @@ imgui_gfx::imgui_gfx(
 	HWND hWnd, ID3D12Device2* pDevice, ID3D12DescriptorHeap* srv, 
 	DXGI_FORMAT bBufferFormat, int frames, UINT imgui_offset
 )
-	: m_srv_descriptor_heap(srv),
-	  m_imgui_offset(imgui_offset),
-	  m_srv_descriptor_size(pDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV))
+	: m_srv_descriptor_heap(srv)
+	, m_imgui_srv_heap_offset(imgui_offset)
+	, m_srv_descriptor_size(pDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV))
+	, m_device(pDevice)
 {
 	IMGUI_CHECKVERSION();
 	ImGui::CreateContext();
@@ -65,11 +66,39 @@ void imgui_gfx::scene_stats()
 	ImGui::End();
 }
 
+void imgui_gfx::draw_scene(UINT texture_offset, ImVec2 dimensions)
+{
+	ImGui::Begin("Scene view");
+	ImTextureID tex_id = reinterpret_cast<void*>(get_tex_gpu_handle(texture_offset).ptr);
+	ImGui::Image(tex_id, dimensions);
+	ImGui::End();
+}
+
+bool imgui_gfx::is_imgui_window_resized(ImGuiWindow* im_win)
+{
+	static ImVec2 prevSize = ImVec2(0, 0);  // Store previous size
+	ImVec2 currentSize = { im_win->Size.x, im_win->Size.y };
+
+	if (currentSize.x != prevSize.x || currentSize.y != prevSize.y) {
+		// Window has been resized
+		ImGui::Text("Window resized!");
+		// You can trigger layout updates or resource reallocation here
+		return true;
+	}
+	else
+	{
+		return false;
+	}
+
+	prevSize = currentSize;  // Update for next frame
+	return false;
+}
+
 D3D12_CPU_DESCRIPTOR_HANDLE imgui_gfx::get_srv_cpu_handle(UINT local_offset) const
 {
 	// get the handle to the start of the descriptor heap on the cpu side
 	D3D12_CPU_DESCRIPTOR_HANDLE cpu_handle{ m_srv_descriptor_heap->GetCPUDescriptorHandleForHeapStart()};
-	cpu_handle.ptr += m_srv_descriptor_size * (m_imgui_offset + local_offset);
+	cpu_handle.ptr += m_srv_descriptor_size * (m_imgui_srv_heap_offset + local_offset);
 	return cpu_handle;
 }
 
@@ -77,6 +106,17 @@ D3D12_GPU_DESCRIPTOR_HANDLE imgui_gfx::get_srv_gpu_handle(UINT local_offset) con
 {
 	// get the handle to the start of the descriptor heap on the gpu side
 	D3D12_GPU_DESCRIPTOR_HANDLE gpu_handle{ m_srv_descriptor_heap->GetGPUDescriptorHandleForHeapStart() };
-	gpu_handle.ptr += m_srv_descriptor_size * (m_imgui_offset + local_offset);
+	gpu_handle.ptr += m_srv_descriptor_size * (m_imgui_srv_heap_offset + local_offset);
 	return gpu_handle;
+}
+
+D3D12_GPU_DESCRIPTOR_HANDLE imgui_gfx::get_tex_gpu_handle(UINT texture_heap_offset) const
+{
+	// display the off-screen render target inside an imgui window.
+	D3D12_GPU_DESCRIPTOR_HANDLE texture_handle{ m_srv_descriptor_heap->GetGPUDescriptorHandleForHeapStart() };
+	texture_handle.ptr += texture_heap_offset * m_device->GetDescriptorHandleIncrementSize(
+		D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV
+	);
+
+	return texture_handle;
 }

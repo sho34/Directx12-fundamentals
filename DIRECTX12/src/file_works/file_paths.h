@@ -6,69 +6,26 @@
 #include <string>
 #include <sstream>
 
-inline std::wstring get_file_pathw(std::wstring path=L"")
+
+inline std::wstring get_project_dir()
 {
-	// Only for wide string types, if you want the type for ansi strings call get_file_path().
-	// Fetches the dir path of your solution folder.
-	// This will save you the trouble of having to write the full path of your files ralative to your :C drive.
+	wchar_t buffer[MAX_PATH];
+	GetModuleFileNameW(nullptr, buffer, MAX_PATH);
 
-	std::wstring shader_location = __FILEW__;
-	std::wstring full_path, tmp_path{ L"\\DIRECTX12\\src\\file_works\\file_paths.h" };
+	std::wstring fullPath(buffer);
+	size_t lastSlash = fullPath.find_last_of(L"\\/");
 
-	size_t path_stride{ 
-		shader_location.length() - tmp_path.length() 
-	};
-
-	for (size_t i = 0; i < path_stride; ++i)
-	{
-		full_path = full_path + shader_location[i];
-	}
-
-	full_path += path;
-
-	return full_path;
+	return fullPath.substr(0, lastSlash); // Removes the executable name
 }
 
-inline std::wstring concatw(std::wstring in)
+inline std::wstring get_shader_loc(std::wstring shader_name)
 {
-	std::wstring res{ L"output\\Debug\\x64\\" };
-	res += in;
-	return res;
+	// Example usage: load_shader(L"myshader.hlsl");
+	std::wstring path{ get_project_dir() };
+	path += L"\\";
+	path += shader_name;
+
+	return  path;
 }
 
-inline std::string concat(std::string in)
-{
-	std::string res{ "output\\Debug\\x64\\" };
-	res += in;
-	return res;
-}
-
-inline std::string get_file_path(std::string path = "")
-{
-
-	std::string shader_location = __FILE__;
-	std::string full_path, tmp_path{ "DIRECTX12\\src\\file_works\\file_paths.h" };
-
-	size_t path_stride{ 
-		shader_location.length() - tmp_path.length() 
-	};
-
-	for (size_t i = 0; i < path_stride; ++i)
-	{
-		full_path = full_path + shader_location[i];
-	}
-
-	full_path += path;
-
-	std::ostringstream oss;
-	oss << "***********************SHADER PATH**********************\n";
-	oss << full_path << "\n" << std::endl;
-
-	::OutputDebugStringA(oss.str().c_str());
-
-	return full_path;
-}
-
-
-#define _FPW_(__SHADER_PATH__) get_file_pathw(concatw(L#__SHADER_PATH__)).c_str()
-#define _FP_(__SHADER_PATH__) get_file_path(concat(__SHADER_PATH__))
+#define LOAD_SHADER(__SHADER_FILE__) get_shader_loc(__SHADER_FILE__)
