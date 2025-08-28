@@ -93,6 +93,9 @@
     <ClInclude Include="src\pipeline\pipeline_effects.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="src\root_signature\root_signature.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\Directx12.cpp">
@@ -141,6 +144,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\pipeline\pipeline_state_object.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\root_signature\root_signature.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

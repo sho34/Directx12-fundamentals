@@ -368,7 +368,7 @@ void teapot_render::create_constant_buffer()
 {
     // will be updated every frame.
     UINT element_size_aligned{ (sizeof(XMFLOAT4X4) + 255) & ~255 };
-    UINT64 buffer_size{ element_size_aligned * m_buffer_count };
+    UINT64 buffer_size{ static_cast<unsigned long long>(element_size_aligned) * m_buffer_count };
 
     D3D12_HEAP_PROPERTIES heap_properties;
     ::ZeroMemory(&heap_properties, sizeof(heap_properties));
@@ -407,76 +407,18 @@ void teapot_render::create_root_signature()
 {
     // * THIS IS A FUNCTION WHERE THE INPUTS TO THE SHADERS ARE DECLARED.
 
-    // #1
-    D3D12_DESCRIPTOR_RANGE dsv_transfrm_and_color_srv_range;
-    ::ZeroMemory(&dsv_transfrm_and_color_srv_range, sizeof(dsv_transfrm_and_color_srv_range));
-
-    dsv_transfrm_and_color_srv_range.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
-    dsv_transfrm_and_color_srv_range.NumDescriptors = 2; // we have two structured buffers and two descriptors.
-    dsv_transfrm_and_color_srv_range.BaseShaderRegister = 0; // starting from the first register t0.
-    dsv_transfrm_and_color_srv_range.RegisterSpace = 0; // allows us to use the same register by using diff space.
-    dsv_transfrm_and_color_srv_range.OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
-
-    // #2
-    D3D12_ROOT_PARAMETER ds_transform_and_color_srv;
-    ::ZeroMemory(&ds_transform_and_color_srv, sizeof(ds_transform_and_color_srv));
-    ds_transform_and_color_srv.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
-    ds_transform_and_color_srv.DescriptorTable = { 1, &dsv_transfrm_and_color_srv_range }; // one range.
-    ds_transform_and_color_srv.ShaderVisibility = D3D12_SHADER_VISIBILITY_DOMAIN; // used by the domain shader.
-
-    // #3
-    D3D12_ROOT_PARAMETER ds_obj_cb;
-    ::ZeroMemory(&ds_obj_cb, sizeof(ds_obj_cb));
-    ds_obj_cb.ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
-    ds_obj_cb.Descriptor = { 0, 0 };    // first register b0 in first space.
-    ds_obj_cb.ShaderVisibility = D3D12_SHADER_VISIBILITY_DOMAIN; // only used by the domain shader.
-
-    // #4
-    D3D12_ROOT_PARAMETER hs_tess_factors_cb;
-    ::ZeroMemory(&hs_tess_factors_cb, sizeof(hs_tess_factors_cb));
-    hs_tess_factors_cb.ParameterType = D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS;
-    hs_tess_factors_cb.Constants = { 0, 0, 2 }; // 2 constants in first register b0 in first register space.
-    hs_tess_factors_cb.ShaderVisibility = D3D12_SHADER_VISIBILITY_HULL; // only used in the hull shader.
-
-    std::vector<D3D12_ROOT_PARAMETER> root_parameters{ ds_obj_cb, hs_tess_factors_cb, ds_transform_and_color_srv };
-
-    // #5
-    D3D12_ROOT_SIGNATURE_FLAGS root_signature_flags{
-        D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT |  // using vertex and index buffers.
-        D3D12_ROOT_SIGNATURE_FLAG_DENY_VERTEX_SHADER_ROOT_ACCESS     |
-        D3D12_ROOT_SIGNATURE_FLAG_DENY_GEOMETRY_SHADER_ROOT_ACCESS   |
+	root_signature rs(m_dx12_device.Get());
+    rs.create_root_descriptor(D3D12_ROOT_PARAMETER_TYPE_CBV, D3D12_SHADER_VISIBILITY_DOMAIN, 0, 0);
+    rs.create_root_constant(2, D3D12_SHADER_VISIBILITY_HULL, 0, 0);
+    rs.create_descriptor_table(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, D3D12_SHADER_VISIBILITY_DOMAIN, 2, 0, 0);
+    rs.finalize_root_sig_creation(
+        D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT  |
+        D3D12_ROOT_SIGNATURE_FLAG_DENY_VERTEX_SHADER_ROOT_ACCESS      |
+        D3D12_ROOT_SIGNATURE_FLAG_DENY_GEOMETRY_SHADER_ROOT_ACCESS    |
         D3D12_ROOT_SIGNATURE_FLAG_DENY_PIXEL_SHADER_ROOT_ACCESS
-    };
+	);
 
-    // #6
-    D3D12_ROOT_SIGNATURE_DESC root_signature_desc;
-    ::ZeroMemory(&root_signature_desc, sizeof(root_signature_desc));
-    root_signature_desc.NumParameters = static_cast<UINT>(root_parameters.size());
-    root_signature_desc.pParameters = root_parameters.data();
-    root_signature_desc.NumStaticSamplers = 0; // can be stored in root signature separately and consume no space.
-    root_signature_desc.pStaticSamplers = nullptr; // we are not using texturing.
-    root_signature_desc.Flags = root_signature_flags;
-
-    // #7
-    ComPtr<ID3DBlob> signature;
-    ComPtr<ID3DBlob> error;
-
-    THROW_GRAPHICS_INFO(
-        D3D12SerializeRootSignature(
-            &root_signature_desc, D3D_ROOT_SIGNATURE_VERSION_1, 
-            signature.ReleaseAndGetAddressOf(), error.ReleaseAndGetAddressOf()
-
-        )
-    );
-
-    // #8 create the root signature.
-    THROW_GRAPHICS_INFO(
-        m_dx12_device->CreateRootSignature(
-            0, signature->GetBufferPointer(), signature->GetBufferSize(),
-            IID_PPV_ARGS(m_root_signature.ReleaseAndGetAddressOf())
-        )
-    );
-
+	m_root_signature = rs.get_root_signature();
 }
 
 void teapot_render::create_pipeline_state_wire_frame()
@@ -484,6 +426,7 @@ void teapot_render::create_pipeline_state_wire_frame()
     wire_frame_pso wire_frame_mode(m_dx12_device.Get(), m_root_signature.Get());
     wire_frame_mode.initialize();
 
+    //
     m_pipeline_state_wire_frame = wire_frame_mode.get_pso();
     m_curr_pipeline_state = m_pipeline_state_wire_frame;
 }
@@ -493,6 +436,7 @@ void teapot_render::create_pipeline_state_solid()
     solid_pso solid_mode(m_dx12_device.Get(), m_root_signature.Get());
     solid_mode.initialize();
 
+    // 
     m_pipeline_state_solid = solid_mode.get_pso();
 }
 

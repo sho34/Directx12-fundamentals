@@ -20,6 +20,7 @@ private:
 	ComPtr<ID3DBlob> m_hull_shader{ load_shader(LOAD_SHADER(L"HullShader.cso")) };
 	ComPtr<ID3DBlob> m_domain_shader{ load_shader(LOAD_SHADER(L"DomainShader.cso")) };
 
+
 protected:
 	void configure_shaders() override
 	{
@@ -126,6 +127,7 @@ private:
 	ComPtr<ID3DBlob> m_pixel_shader{ load_shader(LOAD_SHADER(L"PixelShader.cso")) };
 	ComPtr<ID3DBlob> m_hull_shader{ load_shader(LOAD_SHADER(L"HullShader.cso")) };
 	ComPtr<ID3DBlob> m_domain_shader{ load_shader(LOAD_SHADER(L"DomainShader.cso")) };
+
 
 protected:
 	void configure_shaders() override

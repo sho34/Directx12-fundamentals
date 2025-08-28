@@ -40,6 +40,7 @@ protected:
 	D3D12_RASTERIZER_DESC							m_rasterizer_desc = {};
 	D3D12_BLEND_DESC								m_blend_desc = {};
 	D3D12_DEPTH_STENCIL_DESC						m_depth_stencil_desc = {};
+	// input element descriptors
 	std::vector<D3D12_INPUT_ELEMENT_DESC>			m_input_element_descriptors;
 
 public:

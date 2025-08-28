@@ -12,6 +12,7 @@
 #include "imgui_graphics/imgui_gfx_window.h"
 #include "render/texture_renderer.h"
 #include "pipeline/pipeline_effects.h"
+#include "root_signature/root_signature.h"
 
 using namespace DirectX;
 class teapot_render : public directx12_graphics

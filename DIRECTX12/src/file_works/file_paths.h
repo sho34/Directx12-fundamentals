@@ -7,7 +7,7 @@
 #include <sstream>
 
 
-inline std::wstring get_project_dir()
+inline std::wstring get_output_dir()
 {
 	wchar_t buffer[MAX_PATH];
 	GetModuleFileNameW(nullptr, buffer, MAX_PATH);
@@ -20,8 +20,8 @@ inline std::wstring get_project_dir()
 
 inline std::wstring get_shader_loc(std::wstring shader_name)
 {
-	// Example usage: load_shader(L"myshader.hlsl");
-	std::wstring path{ get_project_dir() };
+	// Example usage: get_shader_loc(L"myshader.hlsl");
+	std::wstring path{ get_output_dir() };
 	path += L"\\";
 	path += shader_name;
 
