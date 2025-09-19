@@ -21,7 +21,7 @@ public:
 public:
 	imgui_gfx(
 		HWND hWnd, ID3D12Device2* pDevice, ID3D12DescriptorHeap* srv,
-		DXGI_FORMAT bBufferFormat, int frames, UINT imgui_offset
+		DXGI_FORMAT bBufferFormat, UINT frames, UINT imgui_offset
 	);
 
 	~imgui_gfx();
@@ -31,24 +31,22 @@ public:
 	void setup_window_docking();
 	void render_imgui(void*);// pass a pointer to a command-list
 	void scene_stats();
-	void draw_scene(UINT texture_offset, ImVec2 dimensions);
+	void dock_space();
+	void draw_scene(const D3D12_GPU_DESCRIPTOR_HANDLE texture_gpu_handle);
+	ImGuiWindow* get_scene_window() const;
 
-	// check if the window is being resized.
-	bool is_imgui_window_resized(ImGuiWindow* im_win);
-
-private:
+protected:
 	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> m_srv_descriptor_heap;
 	UINT m_imgui_srv_heap_offset;
 	UINT m_srv_descriptor_size;
 
-private:
+protected:
 	Microsoft::WRL::ComPtr<ID3D12Device2> m_device;
 
-private:
+protected:
 	// get the handles to the descriptor heaps.
 	D3D12_CPU_DESCRIPTOR_HANDLE get_srv_cpu_handle(UINT local_offset) const;
 	D3D12_GPU_DESCRIPTOR_HANDLE get_srv_gpu_handle(UINT local_offset) const;
-	D3D12_GPU_DESCRIPTOR_HANDLE get_tex_gpu_handle(UINT texture_heap_offset) const;
 };
 
 // Forward declare message handler from imgui_impl_win32.cpp

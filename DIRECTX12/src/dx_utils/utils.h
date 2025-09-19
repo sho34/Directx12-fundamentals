@@ -1,11 +1,26 @@
 #pragma once
+
+// create a helper macro for adding commands to the command queue
+#ifndef ADD_TO_QUEUE
+#define ADD_TO_QUEUE(commandlist, command_queue_gpu)							\
+{																				\
+	ID3D12CommandList* cmd_lists{ commandlist.Get() };						\
+	command_queue_gpu->ExecuteCommandLists(1, &cmd_lists);	\
+}
+#endif		
+
+
 #ifndef __utils__
 #define __utils__
 
 #include <wrl/client.h>
-// somehow when i use std::wstring shit gets messy and conflicts happen within the code, especially areas where i 
-// use wide string types in Directx12.cpp and Directx12Ex.cpp.
-//#include <string>
+#include <vector>
+#include <d3d12.h>
+
+#if defined(max)
+#undef max
+#endif
+
 
 namespace utility_functions
 {
@@ -32,7 +47,7 @@ namespace utility_functions
 		::ZeroMemory(&resource_descriptor, sizeof(resource_descriptor));
 		resource_descriptor.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
 		resource_descriptor.Alignment = 0;
-		resource_descriptor.Width = buffer_size;
+		resource_descriptor.Width = std::max((UINT)1, buffer_size);
 		resource_descriptor.Height = 1;
 		resource_descriptor.DepthOrArraySize = 1;
 		resource_descriptor.MipLevels = 1;
@@ -152,6 +167,7 @@ namespace utility_functions
 
 		return default_buffer;
 	}
+
 
 	// our vertex buffer
 	template<typename T>

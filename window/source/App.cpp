@@ -7,7 +7,7 @@ App::App()
 {
 	try
 	{
-		p_teapot_graphics = std::make_unique<teapot_render>(wnd.GetHwnd(), wnd.GetWidth(), wnd.GetHeight());
+		p_3d_renderer = std::make_unique<renderer>(wnd.GetHwnd(), wnd.GetWidth(), wnd.GetHeight());
 	}
 	catch (const DxException& e)
 	{
@@ -58,12 +58,8 @@ void App::render_frames() const
 {
 	if (!wnd.appPaused)
 	{
-		// I need to fix the issue with imgui that prevents me from dragging the imgui window outside the render
-		// window when using appPaused.
-		p_teapot_graphics->get_mouse_pos({ wnd.mouse.GetPosX(), wnd.mouse.GetPosY() });
-		p_teapot_graphics->activate_v_sync_parameters();
-		p_teapot_graphics->update_fps();
-		p_teapot_graphics->render();
+		p_3d_renderer->activate_v_sync_parameters();
+		p_3d_renderer->draw_frame(1.0f, { wnd.mouse.GetPosX(), wnd.mouse.GetPosY() });
 	}
 	else
 	{
@@ -84,7 +80,7 @@ void App::handle_kbd_messages()
 		switch (e->GetCode())
 		{
 		case VK_F11:
-			p_teapot_graphics->resize_buffers(
+			p_3d_renderer->resize_buffers(
 				static_cast<uint32_t>(wnd.GetWidth()), static_cast<uint32_t>(wnd.GetHeight())
 			);
 			break;
@@ -95,15 +91,7 @@ void App::handle_kbd_messages()
 		// keyboard press keys
 		if(wnd.kbd.KeyIsPressed('V'))
 		{
-			p_teapot_graphics->toggle_v_sync();
-		}
-		if (wnd.kbd.KeyIsPressed('W'))
-		{
-			p_teapot_graphics->toggle_pipeline_state_wire_frame();
-		}
-		if (wnd.kbd.KeyIsPressed('S'))
-		{
-			p_teapot_graphics->toggle_pipeline_state_solid();
+			p_3d_renderer->toggle_v_sync();
 		}
 	}
 }
@@ -122,15 +110,13 @@ void App::handle_windows_messages()
 		switch (m.msg)
 		{
 		case WM_CREATE:
-			// resize the back buffers at window creation.
-			p_teapot_graphics->resize_buffers(
+			p_3d_renderer->resize_buffers(
 				static_cast<uint32_t>(wnd.GetWidth()), static_cast<uint32_t>(wnd.GetHeight())
 			);
 			break;
 
 		case WM_SIZE:
-			// when resizing the window also.
-			p_teapot_graphics->resize_buffers(
+			p_3d_renderer->resize_buffers(
 				static_cast<uint32_t>(wnd.GetWidth()), static_cast<uint32_t>(wnd.GetHeight())
 			);
 			break;

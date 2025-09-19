@@ -9,6 +9,10 @@
 #include "../dx_exceptions/Directx12Ex.h"
 #include "../dx_exceptions/exception-macros.h"
 
+// directx12 colors 
+#include <DirectXColors.h>
+#include <DirectXMath.h>
+
 // To be able to use std::max.
 #if defined(max)
 #undef max
@@ -19,20 +23,20 @@
 // EXAMPLE USE CASES ARE RENDERING MY ENTIRE SCENE TO AN IMGUI WINDOW, SAMPLING, ETC.
 
 
-class texture
+class offscreen_texture
 {
 public:
-	texture(
+	offscreen_texture(
 		DXGI_FORMAT format, 
 		ID3D12Device2* p_device, 
 		ID3D12DescriptorHeap* p_srv, 
 		UINT64 srv_heap_offset,
 		int width, int height
 	);
-	~texture() = default;
+	~offscreen_texture() = default;
 
 public:
-	Microsoft::WRL::ComPtr<ID3D12Resource> get_resource() const;
+	Microsoft::WRL::ComPtr<ID3D12Resource> get_resource_render_target() const;
 
 public:
 	D3D12_CPU_DESCRIPTOR_HANDLE get_rtv_cpu_handle() const; // render target view cpu handle
@@ -41,13 +45,13 @@ public:
 
 private:
 	// depth values if we are rendering to an off-screen texture.
-	void create_offscreen_texture();
+	void create_offscreen_texture_rt();
 	void create_texture_descriptor_heap_dsv();
 	void create_texture_depth_stencil_buffer();
 
 public:
 	void update_texture(float width, float height);
-	void clear_texture(ID3D12GraphicsCommandList* p_command_list);
+	void clear_texture(ID3D12GraphicsCommandList* p_command_list, DirectX::XMFLOAT4& clear_color);
 	void update_texture_depth_stencil_buffer(float width, float height);
 
 private:

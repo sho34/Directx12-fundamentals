@@ -2,7 +2,7 @@
 
 imgui_gfx::imgui_gfx(
 	HWND hWnd, ID3D12Device2* pDevice, ID3D12DescriptorHeap* srv, 
-	DXGI_FORMAT bBufferFormat, int frames, UINT imgui_offset
+	DXGI_FORMAT bBufferFormat, UINT frames, UINT imgui_offset
 )
 	: m_srv_descriptor_heap(srv)
 	, m_imgui_srv_heap_offset(imgui_offset)
@@ -66,32 +66,24 @@ void imgui_gfx::scene_stats()
 	ImGui::End();
 }
 
-void imgui_gfx::draw_scene(UINT texture_offset, ImVec2 dimensions)
+void imgui_gfx::dock_space()
+{
+	bool show_demo_window = true;
+	ImGui::ShowDemoWindow(&show_demo_window);
+}
+
+void imgui_gfx::draw_scene(const D3D12_GPU_DESCRIPTOR_HANDLE texture_gpu_handle)
 {
 	ImGui::Begin("Scene view");
-	ImTextureID tex_id = reinterpret_cast<void*>(get_tex_gpu_handle(texture_offset).ptr);
-	ImGui::Image(tex_id, dimensions);
+	ImVec2 view_port_panel_size = ImGui::GetContentRegionAvail();	// get current window dimensions.
+	ImTextureID tex_id = reinterpret_cast<void*>(texture_gpu_handle.ptr);
+	ImGui::Image(tex_id, view_port_panel_size);
 	ImGui::End();
 }
 
-bool imgui_gfx::is_imgui_window_resized(ImGuiWindow* im_win)
+ImGuiWindow* imgui_gfx::get_scene_window() const
 {
-	static ImVec2 prevSize = ImVec2(0, 0);  // Store previous size
-	ImVec2 currentSize = { im_win->Size.x, im_win->Size.y };
-
-	if (currentSize.x != prevSize.x || currentSize.y != prevSize.y) {
-		// Window has been resized
-		ImGui::Text("Window resized!");
-		// You can trigger layout updates or resource reallocation here
-		return true;
-	}
-	else
-	{
-		return false;
-	}
-
-	prevSize = currentSize;  // Update for next frame
-	return false;
+	return ImGui::FindWindowByName("Scene view");
 }
 
 D3D12_CPU_DESCRIPTOR_HANDLE imgui_gfx::get_srv_cpu_handle(UINT local_offset) const
@@ -110,13 +102,3 @@ D3D12_GPU_DESCRIPTOR_HANDLE imgui_gfx::get_srv_gpu_handle(UINT local_offset) con
 	return gpu_handle;
 }
 
-D3D12_GPU_DESCRIPTOR_HANDLE imgui_gfx::get_tex_gpu_handle(UINT texture_heap_offset) const
-{
-	// display the off-screen render target inside an imgui window.
-	D3D12_GPU_DESCRIPTOR_HANDLE texture_handle{ m_srv_descriptor_heap->GetGPUDescriptorHandleForHeapStart() };
-	texture_handle.ptr += texture_heap_offset * m_device->GetDescriptorHandleIncrementSize(
-		D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV
-	);
-
-	return texture_handle;
-}

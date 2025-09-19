@@ -3,7 +3,7 @@
 #define __App__
 
 #include "window/window.h"
-#include "teapot_render.h"
+#include "renderer.h"
 
 class App
 {
@@ -20,7 +20,7 @@ private:
 
 private:
 	Window wnd;
-	std::unique_ptr<teapot_render> p_teapot_graphics;
+	std::unique_ptr<renderer> p_3d_renderer;
 
 private:
 	bool initialised = false;

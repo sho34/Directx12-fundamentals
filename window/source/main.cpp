@@ -13,27 +13,6 @@ int WINAPI WinMain(
 	// be rendered in a DPI sensitive fashion.
 	SetThreadDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
 
-	try
-	{
-		return App{}.Run();
-	}
-
-	catch (const Window::Exception& e)
-	{
-		MessageBoxA(
-			nullptr, e.what(), e.GetType(), MB_OK | MB_ICONEXCLAMATION
-		);
-	}
-	catch (const std::exception& e)
-	{
-		MessageBoxA(
-			nullptr, e.what(), "STANDARD EXCEPTION", MB_OK | MB_ICONEXCLAMATION
-		);
-	}
-	catch (...)
-	{
-		MessageBoxA(nullptr, "no details available", "Unkown exception", MB_OK | MB_ICONEXCLAMATION);
-	}
-
-	return 0;
+	// will add a try block to catch win32 exceptions.
+	return App{}.Run();
 }

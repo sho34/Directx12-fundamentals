@@ -4,6 +4,29 @@ root_signature::root_signature(ID3D12Device2* p_device)
 	:m_device(p_device)
 {}
 
+void root_signature::create_static_samplers(UINT shader_register, UINT register_space)
+{
+	// configure the static samplers in here 
+	D3D12_STATIC_SAMPLER_DESC  static_sampler_descriptor;
+	::ZeroMemory(&static_sampler_descriptor, sizeof(static_sampler_descriptor));
+	static_sampler_descriptor.Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
+	static_sampler_descriptor.AddressU = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
+	static_sampler_descriptor.AddressV = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
+	static_sampler_descriptor.AddressW = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
+	static_sampler_descriptor.MipLODBias = 0;
+	static_sampler_descriptor.MaxAnisotropy = 0;
+	static_sampler_descriptor.ComparisonFunc = D3D12_COMPARISON_FUNC_NEVER;
+	static_sampler_descriptor.BorderColor = D3D12_STATIC_BORDER_COLOR_TRANSPARENT_BLACK;
+	static_sampler_descriptor.MinLOD = 0.0f;
+	static_sampler_descriptor.MaxLOD = D3D12_FLOAT32_MAX;
+	static_sampler_descriptor.ShaderRegister = shader_register;
+	static_sampler_descriptor.RegisterSpace = register_space;
+	static_sampler_descriptor.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+
+	// add the samplers to the samplers vector.
+	m_static_samplers.push_back(static_sampler_descriptor);
+}
+
 void root_signature::create_descriptor_table(
 	D3D12_DESCRIPTOR_RANGE_TYPE desc_range_type, D3D12_SHADER_VISIBILITY shader_visibility, 
 	UINT num_descriptors, UINT base_shader_register, UINT register_space
@@ -66,9 +89,37 @@ void root_signature::finalize_root_sig_creation(D3D12_ROOT_SIGNATURE_FLAGS flags
 	::ZeroMemory(&root_signature_desc, sizeof(root_signature_desc));
 	root_signature_desc.NumParameters = static_cast<UINT>(m_root_parameters.size());
 	root_signature_desc.pParameters = m_root_parameters.data();
-	root_signature_desc.NumStaticSamplers = 0; // can be stored in root signature separately and consume no space.
-	root_signature_desc.pStaticSamplers = nullptr; // we are not using texturing.
+	root_signature_desc.NumStaticSamplers = static_cast<UINT>(m_static_samplers.size()); 
+	root_signature_desc.pStaticSamplers = m_static_samplers.data();
 	root_signature_desc.Flags = flags;
+
+	// #7
+	Microsoft::WRL::ComPtr<ID3DBlob> signature;
+	Microsoft::WRL::ComPtr<ID3DBlob> error;
+
+	THROW_GRAPHICS_INFO(
+		D3D12SerializeRootSignature(
+			&root_signature_desc, D3D_ROOT_SIGNATURE_VERSION_1,
+			signature.ReleaseAndGetAddressOf(), error.ReleaseAndGetAddressOf()
+
+		)
+	);
+
+	// #8 create the root signature.
+	THROW_GRAPHICS_INFO(
+		m_device->CreateRootSignature(
+			0, signature->GetBufferPointer(), signature->GetBufferSize(),
+			IID_PPV_ARGS(m_root_signature.ReleaseAndGetAddressOf())
+		)
+	);
+}
+
+void root_signature::create_default()
+{
+	CD3DX12_ROOT_SIGNATURE_DESC root_signature_desc;
+	root_signature_desc.Init(
+		0, nullptr, 0, nullptr, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT
+	);
 
 	// #7
 	Microsoft::WRL::ComPtr<ID3DBlob> signature;

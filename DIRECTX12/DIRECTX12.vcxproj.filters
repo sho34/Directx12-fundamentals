@@ -33,12 +33,6 @@
     <ClInclude Include="src\dx_exceptions\Infoman.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\teapot_render.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="src\teapot_data\TeapotData.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="src\dx_utils\utils.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -75,7 +69,7 @@
     <ClInclude Include="src\imgui_graphics\imgui\imstb_truetype.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\render\frame_resources.h">
+    <ClInclude Include="src\render\render_items.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\dx_utils\directx12_helpers.h">
@@ -96,6 +90,33 @@
     <ClInclude Include="src\root_signature\root_signature.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="src\scene_editor\scene_editor.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\ECS\componets.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\dx_utils\constant_buffer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\renderer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\mesh_data\shape_data.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\math_helpers\math_helpers.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\math_helpers\camera.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\texture-loader\DDSTextureLoader.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\geometry\vertex_attributes.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\Directx12.cpp">
@@ -108,12 +129,6 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\dx_exceptions\infoman.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\teapot_render.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\teapot_data\TeapotData.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\imgui_graphics\imgui_gfx_window.cpp">
@@ -149,6 +164,18 @@
     <ClCompile Include="src\root_signature\root_signature.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="src\scene_editor\scene_editor.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\renderer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\mesh_data\shape_data.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\texture-loader\DDSTextureLoader.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="src\dx_exceptions\DXGetErrorDescription.inl">
@@ -160,11 +187,10 @@
     <None Include="src\dx_exceptions\DXTrace.inl">
       <Filter>Header Files</Filter>
     </None>
+    <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
-    <FxCompile Include="src\teapot_shaders\DomainShader.hlsl" />
-    <FxCompile Include="src\teapot_shaders\VertexShader.hlsl" />
-    <FxCompile Include="src\teapot_shaders\HullShader.hlsl" />
-    <FxCompile Include="src\teapot_shaders\PixelShader.hlsl" />
+    <FxCompile Include="src\shaders\cube_vs.hlsl" />
+    <FxCompile Include="src\shaders\cube_ps.hlsl" />
   </ItemGroup>
 </Project>

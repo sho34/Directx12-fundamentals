@@ -59,6 +59,9 @@ void directx12_graphics::resize_buffers(uint32_t width, uint32_t height)
 		// update the depth stencil buffer.
 		update_depth_stencil_buffer();		
 		update_render_target_views();
+
+		// resize the view-ports and scissor rect.
+		initialize_viewport_scissor_rect();
 	}
 }
 
@@ -87,7 +90,7 @@ void directx12_graphics::update_fps()
 
 		// write the frame stats string to a string.
 		m_frame_stats = oss.str();
-
+		::OutputDebugString(m_frame_stats.c_str());
 		frame_counter = 0;
 		elapsed_seconds = 0.0;
 	}
@@ -130,6 +133,7 @@ void directx12_graphics::initiallize_pipeline_resources()
 		create_depth_stencil_buffer();
 		create_descriptor_heap_depth_stencil();
 		create_descriptor_heap_shared();
+		initialize_viewport_scissor_rect();
 	}
 
 }
@@ -209,6 +213,7 @@ void directx12_graphics::log_available_graphics_adapters()
 
 void directx12_graphics::create_command_allocators()
 {
+	// WHEN COMMANDS ARE EXECUTED THE G.P.U WILL ACTUALLY REFERENCE TO COMMANDS IN THIS ALLOCATOR.
 	for (UINT i{ 0 }; i < m_buffer_count; i++)
 	{
 		ComPtr<ID3D12CommandAllocator> command_allocator;
@@ -241,7 +246,9 @@ void directx12_graphics::create_fences()
 		UINT64 initial_value{ 0 };
 		ComPtr<ID3D12Fence> fence;
 
-		THROW_GRAPHICS_INFO(m_dx12_device->CreateFence(initial_value, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&fence)));
+		THROW_GRAPHICS_INFO(
+			m_dx12_device->CreateFence(initial_value, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&fence))
+		);
 		m_fences.push_back(fence);
 		m_frame_fence_values.push_back(initial_value);
 	}
@@ -258,6 +265,7 @@ void directx12_graphics::create_fence_event_handle()
 
 void directx12_graphics::create_command_queue()
 {
+	// for storing the commands that are to be executed on the G.P.U
 	D3D12_COMMAND_QUEUE_DESC queue_descriptor;
 	::ZeroMemory(&queue_descriptor, sizeof(queue_descriptor));
 	queue_descriptor.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
@@ -410,7 +418,6 @@ void directx12_graphics::create_depth_stencil_buffer()
 		)
 	);
 
-
 }
 
 void directx12_graphics::create_descriptor_heap_depth_stencil()
@@ -437,6 +444,33 @@ void directx12_graphics::create_descriptor_heap_depth_stencil()
 		m_dsv_descriptor_heap->GetCPUDescriptorHandleForHeapStart()
 	);
 
+}
+
+void directx12_graphics::initialize_viewport_scissor_rect()
+{
+	// view port 
+	{
+		m_view_port.TopLeftX = 0.0f;
+		m_view_port.TopLeftY = 0.0f;
+		m_view_port.Width = static_cast<FLOAT>(m_client_width);
+		m_view_port.Height = static_cast<FLOAT>(m_client_height);
+		m_view_port.MinDepth = 0.0f;
+		m_view_port.MaxDepth = 1.0f;
+	}
+
+	// scissor rect
+	{
+		RECT rect;
+		if (!GetClientRect(m_hwnd, &rect))
+		{
+			throw(std::runtime_error{ "Error getting window size." });
+		}
+
+		m_scissor_rect.left = 0;
+		m_scissor_rect.top = 0;
+		m_scissor_rect.right = rect.right - rect.left;
+		m_scissor_rect.bottom = rect.bottom - rect.top;
+	}
 }
 
 void directx12_graphics::wait_for_frame(UINT frameIndex)
@@ -475,13 +509,14 @@ void directx12_graphics::toggle_v_sync()
 {
 	// THE FRAME RATE WILL INCREASE, DUE TO THE APPLICATION NOT WAITING FOR THE VERTICAL REFRESH TO PRESENT 
 	// THE RENDERED IMAGE.
-	m_is_vsync_enabled = !m_is_vsync_enabled;
 	if (m_is_vsync_enabled)
 	{
+		m_is_vsync_enabled = !m_is_vsync_enabled;
 		::OutputDebugString("V-Sync Enabled.\n");
 	}
 	else
 	{
+		m_is_vsync_enabled = !m_is_vsync_enabled;
 		::OutputDebugString("V-Sync Disabled.\n");
 	};
 }

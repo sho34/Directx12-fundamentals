@@ -5,6 +5,8 @@
 #include <d3d12.h>
 #include <wrl.h>
 
+#include "../dx_utils/d3dx12.h"
+
 // exceptions 
 #include "../dx_exceptions/Directx12Ex.h"
 #include "../dx_exceptions/exception-macros.h"
@@ -12,16 +14,19 @@
 class root_signature
 {
 public:
-	root_signature(ID3D12Device2* p_device);3
+	root_signature(ID3D12Device2* p_device); 
 	~root_signature() = default;
 
 private:
 	Microsoft::WRL::ComPtr<ID3D12Device2>			m_device;
 	Microsoft::WRL::ComPtr<ID3D12RootSignature>		m_root_signature;
+
 	// the order in which the root parameters are added matters.
 	std::vector<D3D12_ROOT_PARAMETER>				m_root_parameters;
+	std::vector<D3D12_STATIC_SAMPLER_DESC>          m_static_samplers;
 
 public:
+	void create_static_samplers(UINT shader_register, UINT register_space);
 	void create_descriptor_table(
 		D3D12_DESCRIPTOR_RANGE_TYPE desc_range_type, D3D12_SHADER_VISIBILITY shader_visibility,
 		UINT num_descriptors, UINT base_shader_register, UINT register_space 
@@ -36,6 +41,8 @@ public:
 	);
 
 	void finalize_root_sig_creation(D3D12_ROOT_SIGNATURE_FLAGS flags);
+
+	void create_default();
 
 public:
 	Microsoft::WRL::ComPtr<ID3D12RootSignature> get_root_signature() { return m_root_signature; };

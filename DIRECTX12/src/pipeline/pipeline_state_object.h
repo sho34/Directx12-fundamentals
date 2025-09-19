@@ -43,6 +43,7 @@ protected:
 	// input element descriptors
 	std::vector<D3D12_INPUT_ELEMENT_DESC>			m_input_element_descriptors;
 
+
 public:
 	void initialize();
 

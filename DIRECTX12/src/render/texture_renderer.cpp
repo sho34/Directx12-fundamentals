@@ -1,7 +1,7 @@
 #include "texture_renderer.h"
 
 
-texture::texture(
+offscreen_texture::offscreen_texture(
 	DXGI_FORMAT format,
 	ID3D12Device2* p_device,
 	ID3D12DescriptorHeap* p_srv,
@@ -16,37 +16,37 @@ texture::texture(
 	, m_height(height)
 {
 	// CREATE THE RESOURCES 
-	create_offscreen_texture();
+	create_offscreen_texture_rt();
 	create_texture_depth_stencil_buffer();
 	create_texture_descriptor_heap_dsv();
 }
 
-Microsoft::WRL::ComPtr<ID3D12Resource> texture::get_resource() const { return m_off_screen_rt; }
+Microsoft::WRL::ComPtr<ID3D12Resource> offscreen_texture::get_resource_render_target() const { return m_off_screen_rt; }
 
-D3D12_CPU_DESCRIPTOR_HANDLE texture::get_rtv_cpu_handle() const
+D3D12_CPU_DESCRIPTOR_HANDLE offscreen_texture::get_rtv_cpu_handle() const
 {
 	// we are going to need to use this in the main render loop and set it as the current render target.
 	return m_off_screen_rtv_heap->GetCPUDescriptorHandleForHeapStart();
 }
 
-D3D12_GPU_DESCRIPTOR_HANDLE texture::get_srv_gpu_handle() const
+D3D12_GPU_DESCRIPTOR_HANDLE offscreen_texture::get_srv_gpu_handle() const
 {
 	// we are going to use this as input to the imgui texture and display the scene on the imgui window.
-	UINT srv_uav_descriptor_size = m_device->GetDescriptorHandleIncrementSize(
+	UINT cbv_srv_uav_descriptor_size = m_device->GetDescriptorHandleIncrementSize(
 		D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV
 	);
 	D3D12_GPU_DESCRIPTOR_HANDLE handle{ m_shared_srv_desc->GetGPUDescriptorHandleForHeapStart() };
-	handle.ptr += srv_uav_descriptor_size * m_srv_heap_offset; 
+	handle.ptr += cbv_srv_uav_descriptor_size * m_srv_heap_offset; 
 	return handle;
 }
 
-D3D12_CPU_DESCRIPTOR_HANDLE texture::get_dsv_cpu_handle() const
+D3D12_CPU_DESCRIPTOR_HANDLE offscreen_texture::get_dsv_cpu_handle() const
 {
 	// get the handle for the start of the descriptor heap of depth stencil views.
 	return m_dsv_descriptor_heap->GetCPUDescriptorHandleForHeapStart();
 }
 
-void texture::create_offscreen_texture()
+void offscreen_texture::create_offscreen_texture_rt()
 {
 	// Create the off-screen render target texture.
 	{
@@ -103,7 +103,7 @@ void texture::create_offscreen_texture()
 			D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV
 		);
 
-		// add the srv-desscriptor to an existing shared heap at index 3.
+		// add the srv-desscriptor to an existing shared heap at desired index.
 		D3D12_CPU_DESCRIPTOR_HANDLE handle{ m_shared_srv_desc->GetCPUDescriptorHandleForHeapStart() };
 		handle.ptr += srv_uav_descriptor_size * m_srv_heap_offset; // after the two descriptors we already have.
 
@@ -119,7 +119,7 @@ void texture::create_offscreen_texture()
 
 }
 
-void texture::create_texture_descriptor_heap_dsv()
+void offscreen_texture::create_texture_descriptor_heap_dsv()
 {
 	D3D12_DESCRIPTOR_HEAP_DESC heap_decsriptor;
 	::ZeroMemory(&heap_decsriptor, sizeof(heap_decsriptor));
@@ -144,7 +144,7 @@ void texture::create_texture_descriptor_heap_dsv()
 	);
 }
 
-void texture::create_texture_depth_stencil_buffer()
+void offscreen_texture::create_texture_depth_stencil_buffer()
 {
 	D3D12_CLEAR_VALUE depth_optimized_clear_value;
 	::ZeroMemory(&depth_optimized_clear_value, sizeof(depth_optimized_clear_value));
@@ -182,44 +182,55 @@ void texture::create_texture_depth_stencil_buffer()
 			&depth_optimized_clear_value, IID_PPV_ARGS(&m_depth_stencil_buffer)
 		)
 	);
-
-
 }
 
 
-void texture::update_texture(float width, float height)
+void offscreen_texture::update_texture(float width, float height)
 {
 	// update the window dimensions not less than 100x100.
-	m_width = std::max(100.0f, width);
-	m_height = std::max(100.0f, height);
+	m_width = std::max(200.0f, width);
+	m_height = std::max(200.0f, height);
 
 	// release the existing off-screen render target texture.
-	if (m_off_screen_rt)
-	{
-		m_off_screen_rt.Reset();
-	}
 	if (m_off_screen_rtv_heap)
 	{
 		m_off_screen_rtv_heap.Reset();
 	}
 
+	if (m_off_screen_rt)
+	{
+		m_off_screen_rt.Reset();
+	}
+
+	if (m_depth_stencil_buffer)
+	{
+		m_depth_stencil_buffer.Reset();
+	}
+
+	m_off_screen_rtv_heap.Reset();
+	m_dsv_descriptor_heap.Reset();
+
+
 	// recreate the off-screen render target texture.
-	create_offscreen_texture();
+	create_offscreen_texture_rt();
+	create_texture_depth_stencil_buffer();
+	create_texture_descriptor_heap_dsv();
 }
 
-void texture::clear_texture(ID3D12GraphicsCommandList* p_command_list)
+void offscreen_texture::clear_texture(
+	ID3D12GraphicsCommandList* p_command_list, DirectX::XMFLOAT4& clear_color)
 {
 	p_command_list->ClearRenderTargetView(get_rtv_cpu_handle(), m_clear_color, 0, nullptr);
 }
 
 
-void texture::update_texture_depth_stencil_buffer(float width, float height)
+void offscreen_texture::update_texture_depth_stencil_buffer(float width, float height)
 {
 
 	// update the current texture dimensions.
 	m_width = width; m_height = height;
 
-	create_offscreen_texture();
+	create_offscreen_texture_rt();
 	create_texture_depth_stencil_buffer();
 	create_texture_descriptor_heap_dsv();
 }

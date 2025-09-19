@@ -64,6 +64,7 @@ private:
 	void create_descriptor_heap_shared();
 	void create_depth_stencil_buffer();
 	void create_descriptor_heap_depth_stencil();
+	void initialize_viewport_scissor_rect();
 
 protected:
 	void wait_for_frame(UINT frameIndex);
@@ -76,7 +77,9 @@ public:
 
 
 public:
+	// get the adapter details in both wide string formats and ANSI formats.
 	std::wstring get_adapter_details() { return adapater_details; };
+	std::string get_adapter_detailsw() { return wchar_to_char(get_adapter_details().c_str()); };
 
 protected:
 	static const uint8_t	m_buffer_count{ 3 };
@@ -115,6 +118,11 @@ protected:
 	std::vector<ComPtr<ID3D12Fence>>	m_fences;
 
 protected:
+	// for windowing 
+	D3D12_VIEWPORT							m_view_port;
+	D3D12_RECT								m_scissor_rect;
+
+protected:
 	std::string 						m_frame_stats;
 
 private:
@@ -123,7 +131,7 @@ private:
 
 protected:
 	// variables to control the swap-chain present method.
-	bool m_is_vsync_enabled{ true };
+	bool m_is_vsync_enabled{ false };
 	BOOL m_is_tearing_supported{ FALSE };
 	bool m_is_fullscreen_active{ false };
 
