@@ -59,7 +59,7 @@ void App::render_frames() const
 	if (!wnd.appPaused)
 	{
 		p_3d_renderer->activate_v_sync_parameters();
-		p_3d_renderer->draw_frame(1.0f, { wnd.mouse.GetPosX(), wnd.mouse.GetPosY() });
+		p_3d_renderer->draw_frame(1.0f, { wnd.mouse.GetPosX(), wnd.mouse.GetPosY() }, NULL);
 	}
 	else
 	{
@@ -120,6 +120,14 @@ void App::handle_windows_messages()
 				static_cast<uint32_t>(wnd.GetWidth()), static_cast<uint32_t>(wnd.GetHeight())
 			);
 			break;
+
+		case WM_KEYDOWN:
+			p_3d_renderer->m_p_camera->on_key_down(static_cast<UINT8>(m.w_param));
+			break;
+
+		case WM_KEYUP:
+			p_3d_renderer->m_p_camera->on_key_up(static_cast<UINT8>(m.w_param));
+
 		default:
 			break;
 		}

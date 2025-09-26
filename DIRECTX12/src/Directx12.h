@@ -75,6 +75,16 @@ public:
 	void activate_v_sync_parameters();
 	void update_depth_stencil_buffer();
 
+protected:
+	float get_aspect_ratio() const
+	{
+		return static_cast<float>(m_client_width) / static_cast<float>(m_client_height);
+	};
+
+	float get_aspect_ratio(int width, int height) const 
+	{
+		return static_cast<float>(width) / static_cast<float>(height); 
+	}
 
 public:
 	// get the adapter details in both wide string formats and ANSI formats.

@@ -108,13 +108,16 @@
     <ClInclude Include="src\math_helpers\math_helpers.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\math_helpers\camera.h">
+    <ClInclude Include="src\math_helpers\primitive_camera.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\texture-loader\DDSTextureLoader.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\geometry\vertex_attributes.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\camera\camera.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -174,6 +177,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\texture-loader\DDSTextureLoader.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\camera\camera.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

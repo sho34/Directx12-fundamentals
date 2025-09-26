@@ -31,9 +31,12 @@ public:
 	void setup_window_docking();
 	void render_imgui(void*);// pass a pointer to a command-list
 	void scene_stats();
-	void dock_space();
+	void object_manager();
 	void draw_scene(const D3D12_GPU_DESCRIPTOR_HANDLE texture_gpu_handle);
 	ImGuiWindow* get_scene_window() const;
+
+	// by default this is switched off
+	bool m_show_demo_window{ false };
 
 protected:
 	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> m_srv_descriptor_heap;

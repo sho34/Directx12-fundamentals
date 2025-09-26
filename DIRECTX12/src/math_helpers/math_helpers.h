@@ -7,7 +7,7 @@
 struct view_space_matrix
 {
 	// view matrix represents the camera XMMatrixLookAtLH() to get the view matrix.
-	DirectX::XMMATRIX world_space = DirectX::XMMatrixIdentity();
+	DirectX::XMMATRIX view_space = DirectX::XMMatrixIdentity();
 };
 
 struct world_space_matrix
@@ -15,6 +15,7 @@ struct world_space_matrix
 	// world matrix contains all the transformations which positions scales and orients into our virtual world.
 	// every object will have its own world matrix.
 	// needs to be updated per 3D model.
+	DirectX::XMMATRIX world_space = DirectX::XMMatrixIdentity();
 };
 
 struct projection_space_matrix
@@ -29,6 +30,7 @@ struct projection_space_matrix
 struct wvp_matrix
 {
 	// projection matrix moves all the vertices into projection space.
+	DirectX::XMMATRIX wvp = DirectX::XMMatrixIdentity();
 };
 
 #endif

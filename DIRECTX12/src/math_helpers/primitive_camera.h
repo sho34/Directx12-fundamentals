@@ -1,7 +1,7 @@
 #pragma once
 
-#ifndef __camera__
-#define __camera__
+#ifndef __primitive_camera__
+#define __primitive_camera__
 
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
@@ -9,11 +9,11 @@
 
 using namespace DirectX;
 
-class camera
+class primitive_camera
 {
 public:
-	camera() = default;
-	~camera() = default;
+	primitive_camera() = default;
+	~primitive_camera() = default;
 
 public:
 	void update_aspect_ratio(float width, float height)

@@ -6,7 +6,7 @@ renderer::renderer(HWND h_wnd, int width, int height)
 	init_render_items();
 }
 
-void renderer::draw_frame(float dt, POINT mouse_pos)
+void renderer::draw_frame(float dt, POINT mouse_pos, UINT8 key)
 {
 	// update mouse position
 	m_mouse_position = mouse_pos;
@@ -93,28 +93,79 @@ void renderer::render_to_swapchain_buffer()
 	);
 
 	// world view projection matrix
-	{
-		XMFLOAT4X4 mvp_matrix;
-		mvp_matrix = p_camera->update_model_view_proj_mat(m_mouse_position, m_client_width, m_client_height);
+	//{
+	//	XMFLOAT4X4 mvp_matrix;
+	//	mvp_matrix = p_camera->update_model_view_proj_mat(m_mouse_position, m_client_width, m_client_height);
 
-		p_cb_model_view_proj->copy_data_to_buffer(&mvp_matrix, frame_index);
-		m_command_list->SetGraphicsRootConstantBufferView(
-			0, p_cb_model_view_proj->get_gpu_virtual_address_aligned(frame_index)
+	//	p_cb_model_view_proj->copy_data_to_buffer(&mvp_matrix, frame_index);
+	//	m_command_list->SetGraphicsRootConstantBufferView(
+	//		0, p_cb_model_view_proj->get_gpu_virtual_address_aligned(frame_index)
+	//	);
+	//}
+
+	// update the camera every frame
+	m_p_camera->update(ImGui::GetIO().DeltaTime);
+	// render the mesh collection
+	for (size_t i{ 0 }; i < mesh_collection.size(); ++i)
+	{
+		{
+			// calculate the a different world matrix for each 3d object.
+			world_space_matrix world_mat;
+			view_space_matrix view_mat;
+			projection_space_matrix proj_mat;
+			wvp_matrix wvp;
+
+			world_mat.world_space = XMMatrixTranslation(i * 4.0f, 0.0f, 0.0f) * XMMatrixRotationY(i * 15.0f);
+			//proj_mat.projection_matrix_perspective = XMMatrixPerspectiveFovLH(
+			//	XMConvertToRadians(45), get_aspect_ratio(), 0.1f, 1000.0f
+			//);
+
+			// the view matrix is the one that is going to be updated.
+			//view_mat.view_space = XMMatrixLookAtLH(
+			//	XMVectorSet(0.0f, 0.0f, -10.0f, 0.0f), 
+			//	XMVectorSet(0.0f, 0.0f, 0.0f, 0.0f), 
+			//	XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f)
+			//);
+			proj_mat.projection_matrix_perspective = m_p_camera->get_projection_matrix(XM_PIDIV4, get_aspect_ratio());
+			view_mat.view_space = m_p_camera->get_view_matrix();
+
+			wvp.wvp = world_mat.world_space * view_mat.view_space * proj_mat.projection_matrix_perspective;
+
+			XMFLOAT4X4 mvp_matrix;
+			XMStoreFloat4x4(&mvp_matrix, wvp.wvp);
+
+			mesh_collection[i].p_cb_model_view_proj->copy_data_to_buffer(&mvp_matrix, frame_index);
+
+			m_command_list->SetGraphicsRootConstantBufferView(
+				0, mesh_collection[i].p_cb_model_view_proj->get_gpu_virtual_address_aligned(frame_index)
+			);
+		}
+
+		m_command_list->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+		m_command_list->IASetIndexBuffer(&mesh_collection[i].m_index_buffer_view);
+		m_command_list->IASetVertexBuffers(0, 1, &mesh_collection[i].m_vertex_buffer_view);
+
+		// they all share the same instance buffer
+		m_command_list->IASetVertexBuffers(1, 1, &m_instance_buffer_view);
+
+		m_command_list->DrawIndexedInstanced(
+			mesh_collection[i].indices.size(), m_instance_count, 0, 0, 0
 		);
 	}
+	//m_command_list->IASetIndexBuffer(&m_index_buffer_view);
+	//m_command_list->IASetVertexBuffers(0, 1, &m_vertex_buffer_view);
 
 
-	m_command_list->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-	m_command_list->IASetIndexBuffer(&m_index_buffer_view);
-	m_command_list->IASetVertexBuffers(0, 1, &m_vertex_buffer_view);
-	m_command_list->DrawIndexedInstanced(
-		mesh_geometry_data.indices.size(), 1, 0, 0, 0	
-	);
+	//m_command_list->IASetVertexBuffers(1, 1, &m_instance_buffer_view);
+
+	//m_command_list->DrawIndexedInstanced(
+	//	mesh_geometry_data.indices.size(), m_instance_count, 0, 0, 0	
+	//);
 
 
 	// render imgui
 	p_imgui_gfx->init();
-	p_imgui_gfx->dock_space();
+	p_imgui_gfx->object_manager();
 	p_imgui_gfx->scene_stats();
 	p_imgui_gfx->render_imgui(m_command_list.Get());
 
@@ -147,17 +198,26 @@ void renderer::init_render_items()
 	);
 	m_root_signature = shader_inputs.get_root_signature();
 
-	simple_pso pipeline_simple(m_dx12_device.Get(), m_root_signature.Get());
+	simple_solid_pso pipeline_simple(m_dx12_device.Get(), m_root_signature.Get());
 	pipeline_simple.initialize();
 	m_pipeline_state = pipeline_simple.get_pso();
 
-	mesh_geometry_data.vertices = triangle_mesh_textured();
-	mesh_geometry_data.indices = triangle_indices_texture();
+	primitive_mesh_generator primitive;
+	mesh_geometry_data = primitive.create_torrus();
+
+	mesh_collection.push_back(primitive.create_torrus(4.0f, 4.0f * 0.3f));
+	mesh_collection.push_back(primitive.create_sphere());
+	mesh_collection.push_back(primitive.create_plane(15.0f, 15.0f));
+	mesh_collection.push_back(primitive.create_cube(3.0f));
+
+	// create model matrices for each 3d object.
+	// create one huge index buffer for the objects.
+
 
 	// create the wood texture structure to hold its meta data.
 	p_crate_texture = std::make_unique<texture>();
 	p_crate_texture->name = "wood crate texture";
-	p_crate_texture->file_name = L"C:\\Users\\Gumball\\Desktop\\projects\\REV-1\\DIRECTX12\\src\\assets\\WoodCrate01.dds";
+	p_crate_texture->file_name = L"C:\\Users\\Gumball\\Desktop\\projects\\REV-1\\DIRECTX12\\src\\assets\\ice.dds";
 
 	D3D12_CPU_DESCRIPTOR_HANDLE hDescriptor{ m_shared_descriptor_heap->GetCPUDescriptorHandleForHeapStart() };
 	hDescriptor.ptr += 0;
@@ -208,6 +268,47 @@ void renderer::init_render_items()
 	m_index_buffer_view.Format = DXGI_FORMAT_R16_UINT;
 	m_index_buffer_view.SizeInBytes = mesh_geometry_data.indices.size() * sizeof(uint16_t);
 
+	std::wostringstream oss;
+	for (size_t i{ 0 }; i < mesh_collection.size(); ++i)
+	{
+		oss << "vertex buffer[" << i << "]";
+
+		// create the vertex buffer
+		mesh_collection[i].m_vertex_buffer = utility_functions::create_vertex_buffer(
+			m_dx12_device.Get(), mesh_collection[i].vertices, oss.str().c_str()
+		);
+		oss << "index buffer[" << i << "]";
+		// upload each vertex to its own index and vertex buffer.
+		mesh_collection[i].m_index_buffer = utility_functions::create_index_buffer(
+			m_dx12_device.Get(), mesh_collection[i].indices, oss.str().c_str()
+		);
+
+		// create the views to the resources
+		mesh_collection[i].m_vertex_buffer_view.BufferLocation = mesh_collection[i].m_vertex_buffer->GetGPUVirtualAddress();
+		mesh_collection[i].m_vertex_buffer_view.StrideInBytes = static_cast<UINT>(sizeof(VERTEX));
+		mesh_collection[i].m_vertex_buffer_view.SizeInBytes = static_cast<UINT>(
+			m_vertex_buffer_view.StrideInBytes * mesh_collection[i].vertices.size()
+			);
+
+		mesh_collection[i].m_index_buffer_view.BufferLocation = mesh_collection[i].m_index_buffer->GetGPUVirtualAddress();
+		mesh_collection[i].m_index_buffer_view.Format = DXGI_FORMAT_R16_UINT;
+		mesh_collection[i].m_index_buffer_view.SizeInBytes = mesh_collection[i].indices.size() * sizeof(uint16_t);
+
+		// create a constant buffer for every object 
+		mesh_collection[i].p_cb_model_view_proj = std::make_unique<constant_buffer<XMFLOAT4X4>>(m_dx12_device.Get());
+	}
+
+
+	// create the instance buffer 
+	create_instance_transforms();
+	m_instance_buffer = utility_functions::create_vertex_buffer(
+		m_dx12_device.Get(), m_transform_data, L"instance transforms"
+	);
+
+	m_instance_buffer_view.BufferLocation = m_instance_buffer->GetGPUVirtualAddress();
+	m_instance_buffer_view.StrideInBytes = static_cast<UINT>(sizeof(transform));
+	m_instance_buffer_view.SizeInBytes = static_cast<UINT>(m_transform_data.size() * m_instance_buffer_view.StrideInBytes);
+
 	// create the constant buffer for the world view projection matrix.
 	p_cb_model_view_proj = std::make_unique<constant_buffer<XMFLOAT4X4>>(m_dx12_device.Get());
 
@@ -217,12 +318,31 @@ void renderer::init_render_items()
 		DXGI_FORMAT_R8G8B8A8_UNORM, m_buffer_count, 1
 	);
 
-	p_camera = std::make_unique<camera>();
-
+	//p_camera = std::make_unique<primitive_camera>();
+	m_p_camera = std::make_unique<camera>();
+	//m_p_camera->init({ 8, 8, 30 });
 
 }
 
 void renderer::create_srv_descriptors()
 {
+
+}
+
+void renderer::create_instance_transforms()
+{
+
+	for (int i = 0; i < m_instance_count; ++i)
+	{
+		DirectX::XMMATRIX mat = XMMatrixTranslation(i * 2.0f, 0.0f, 0.0f) * XMMatrixRotationY(i * 15.0f);
+
+		transform instance;
+		instance.row1 = DirectX::XMFLOAT4(mat.r[0].m128_f32[0], mat.r[0].m128_f32[1], mat.r[0].m128_f32[2], mat.r[0].m128_f32[3]);
+		instance.row2 = DirectX::XMFLOAT4(mat.r[1].m128_f32[0], mat.r[1].m128_f32[1], mat.r[1].m128_f32[2], mat.r[1].m128_f32[3]);
+		instance.row3 = DirectX::XMFLOAT4(mat.r[2].m128_f32[0], mat.r[2].m128_f32[1], mat.r[2].m128_f32[2], mat.r[2].m128_f32[3]);
+		instance.row4 = DirectX::XMFLOAT4(mat.r[3].m128_f32[0], mat.r[3].m128_f32[1], mat.r[3].m128_f32[2], mat.r[3].m128_f32[3]);
+
+		m_transform_data.push_back(instance);
+	}
 
 }

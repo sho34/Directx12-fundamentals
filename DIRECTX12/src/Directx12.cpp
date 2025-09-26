@@ -115,7 +115,7 @@ void directx12_graphics::initiallize_pipeline_resources()
 	// create device
 	{
 		THROW_GRAPHICS_INFO(
-			D3D12CreateDevice(m_dxgi_adapter_4.Get(), D3D_FEATURE_LEVEL_11_0, IID_PPV_ARGS(&m_dx12_device))
+			D3D12CreateDevice(m_dxgi_adapter_4.Get(), D3D_FEATURE_LEVEL_12_0, IID_PPV_ARGS(&m_dx12_device))
 		);
 	}
 
